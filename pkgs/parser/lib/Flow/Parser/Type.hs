@@ -20,12 +20,17 @@ import Flow.Parser.Common (
   HasAnn,
   Parser,
   SourceSpan (..),
+  pIdentifier,
   pRegionIdentifier,
-  pSimpleVarIdentifier,
   single,
   token,
  )
-import Flow.Parser.Constraint (pAnyTypeIdentifier, pBindersAppTypeLevel, pBindersWoConstraints, pWhereBlockNested)
+import Flow.Parser.Constraint (
+  pBindersAppTypeLevel,
+  pBindersWoConstraints,
+  pQualifiedIdentifier,
+  pWhereBlockNested,
+ )
 
 pType :: Parser (Surface.Type SourceSpan)
 pType = do
@@ -48,20 +53,20 @@ pType = do
 
   pAppable' =
     Megaparsec.choice
-      [ pIdentifier'
-      , Megaparsec.try pParens'
+      [ Megaparsec.label "type identifier" pQualifiedIdentifier'
+      , Megaparsec.label "type parens" $ Megaparsec.try pParens'
       ]
 
   pNotAppable' =
     Megaparsec.choice
-      [ pRegion'
-      , pBuiltin'
-      , pTuple'
-      , Megaparsec.try pRefApp'
-      , pRef'
-      , pFn'
-      , pEffectRow'
-      , pForall'
+      [ Megaparsec.label "region" pRegion'
+      , Megaparsec.label "builtin" pBuiltin'
+      , Megaparsec.label "tuple" pTuple'
+      , Megaparsec.label "ref app" $ Megaparsec.try pRefApp'
+      , Megaparsec.label "ref" pRef'
+      , Megaparsec.label "fn" pFn'
+      , Megaparsec.label "effect row" pEffectRow'
+      , Megaparsec.label "forall" pForall'
       ]
 
   pRegion' = do
@@ -72,8 +77,8 @@ pType = do
     (b, ann) <- pBuiltin
     pure Surface.Type{ty = Surface.TyBuiltinF b, ann = ann}
 
-  pIdentifier' = do
-    i <- pIdentifier pType
+  pQualifiedIdentifier' = do
+    i <- pQualifiedIdentifier pType
     pure Surface.Type{ty = Surface.TyIdentifierF i, ann = i.ann}
 
   pParens' = do
@@ -122,34 +127,8 @@ pBuiltin = do
   tok <- token (Set.singleton $ Megaparsec.Label "builtin type") \case
     Lexer.Punctuation Lexer.LeftRightParen -> Just Surface.BuiltinUnit
     Lexer.Punctuation Lexer.Not -> Just Surface.BuiltinNever
-    Lexer.Identifier "bool" -> Just Surface.BuiltinBool
-    Lexer.Identifier "i8" -> Just Surface.BuiltinI8
-    Lexer.Identifier "i16" -> Just Surface.BuiltinI16
-    Lexer.Identifier "i32" -> Just Surface.BuiltinI32
-    Lexer.Identifier "i64" -> Just Surface.BuiltinI64
-    Lexer.Identifier "i128" -> Just Surface.BuiltinI128
-    Lexer.Identifier "isize" -> Just Surface.BuiltinISize
-    Lexer.Identifier "u8" -> Just Surface.BuiltinU8
-    Lexer.Identifier "u16" -> Just Surface.BuiltinU16
-    Lexer.Identifier "u32" -> Just Surface.BuiltinU32
-    Lexer.Identifier "u64" -> Just Surface.BuiltinU64
-    Lexer.Identifier "u128" -> Just Surface.BuiltinU128
-    Lexer.Identifier "usize" -> Just Surface.BuiltinUSize
-    Lexer.Identifier "f32" -> Just Surface.BuiltinF32
-    Lexer.Identifier "f64" -> Just Surface.BuiltinF64
-    Lexer.Identifier "f128" -> Just Surface.BuiltinF128
-    Lexer.Identifier "byte" -> Just Surface.BuiltinByte
-    Lexer.Identifier "bytestring" -> Just Surface.BuiltinByteString
-    Lexer.Identifier "char" -> Just Surface.BuiltinChar
-    Lexer.Identifier "string" -> Just Surface.BuiltinString
     _ -> Nothing
   pure (tok.value, tok.span)
-
-pIdentifier ::
-  (HasAnn ty SourceSpan) =>
-  Parser (ty SourceSpan) ->
-  Parser (Surface.AnyTypeIdentifier ty SourceSpan)
-pIdentifier = pAnyTypeIdentifier
 
 pParens ::
   (HasAnn ty SourceSpan) =>
@@ -302,13 +281,13 @@ pFnEffectRow pTy = do
   effectAtom :: Parser (Surface.FnEffectAtomF ty SourceSpan)
   effectAtom = do
     Megaparsec.choice
-      [ eAtomNameType
+      [ Megaparsec.try eAtomNameType
       , eAtomType
       ]
    where
     eAtomNameType :: Parser (Surface.FnEffectAtomF ty SourceSpan)
     eAtomNameType = do
-      name <- pSimpleVarIdentifier
+      name <- pIdentifier
       _ <- single (Lexer.Punctuation Lexer.Colon)
       Surface.FnEffectAtomNameTypeF name <$> pTy
 
@@ -323,20 +302,18 @@ pEffectRow ::
 pEffectRow pTy = do
   tokS <- single (Lexer.Punctuation Lexer.AtLeftBracket)
   effects <- Megaparsec.sepEndBy1 effectRowElem (single (Lexer.Punctuation Lexer.Comma))
-  (regions, effects', tailVars) <- collect effects [] [] []
+  (effects', tailVars) <- collect effects [] []
   tokE <- single (Lexer.Punctuation Lexer.RightBracket)
   pure $
     Surface.EffectRowF
-      { regions = Vector.fromList regions
-      , effects = Vector.fromList effects'
+      { effects = Vector.fromList effects'
       , tailVars = Vector.fromList tailVars
       , ann = SourceSpan{start = tokS.span.start, end = tokE.span.end}
       }
  where
   effectRowElem = do
     Megaparsec.choice
-      [ Left . Left <$> pRegionIdentifier
-      , Left . Right <$> pTy
+      [ Left <$> pTy
       , Right <$> tailVarElem
       ]
 
@@ -346,20 +323,15 @@ pEffectRow pTy = do
     ty <- pTy
     pure (ty, SourceSpan{start = tokDD.span.start, end = ty.ann.end})
 
-  collect [] regionsAcc effectsAcc tailVarsAcc =
-    pure (reverse regionsAcc, reverse effectsAcc, reverse tailVarsAcc)
-  collect (Left (Left region) : rest) regionsAcc effectsAcc tailVarsAcc
-    | not (null effectsAcc) || not (null tailVarsAcc) =
-        fail "region argument cannot follow effect argument in effect row"
-    | otherwise =
-        collect rest (region : regionsAcc) effectsAcc tailVarsAcc
-  collect (Left (Right effect) : rest) regionsAcc effectsAcc tailVarsAcc
+  collect [] effectsAcc tailVarsAcc =
+    pure (reverse effectsAcc, reverse tailVarsAcc)
+  collect (Left effect : rest) effectsAcc tailVarsAcc
     | not (null tailVarsAcc) =
         fail "effect argument cannot follow tail variable in effect row"
     | otherwise =
-        collect rest regionsAcc (effect : effectsAcc) tailVarsAcc
-  collect (Right tailVar : rest) regionsAcc effectsAcc tailVarsAcc =
-    collect rest regionsAcc effectsAcc (tailVar : tailVarsAcc)
+        collect rest (effect : effectsAcc) tailVarsAcc
+  collect (Right tailVar : rest) effectsAcc tailVarsAcc =
+    collect rest effectsAcc (tailVar : tailVarsAcc)
 
 pForall ::
   (HasAnn ty SourceSpan) =>

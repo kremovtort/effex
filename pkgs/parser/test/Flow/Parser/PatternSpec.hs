@@ -17,16 +17,16 @@ import Flow.AST.Surface.Pattern qualified as Surface
 import Flow.Lexer qualified as Lexer
 import Flow.Parser (pPattern)
 import Flow.Parser.Common (Parser)
-import Flow.Parser.SpecHelpers (testParser, shouldBeParsed, shouldBe)
 import Flow.Parser.Pattern qualified as PPat
+import Flow.Parser.SpecHelpers (shouldBe, shouldBeParsed, testParser)
 
 pPatternSimple :: Parser (Surface.PatternSimple Lexer.SourceSpan)
 pPatternSimple =
   PPat.pPatternSimple pPatternSimple (fail "anyType") <&> uncurry Surface.PatternSimple
 
-anyType :: Surface.SimpleTypeIdentifier () -> Surface.AnyTypeIdentifier ty ()
+anyType :: Surface.Identifier () -> Surface.QualifiedIdentifierF Surface.Type ()
 anyType ident =
-  Surface.AnyTypeIdentifier
+  Surface.QualifiedIdentifierF
     { qualifierPrefix = Nothing
     , qualifier = Nothing
     , typeQualifier = Nothing
@@ -34,8 +34,8 @@ anyType ident =
     , ann = ()
     }
 
-mkVar :: Text -> Surface.SimpleVarIdentifier ()
-mkVar name = Surface.SimpleVarIdentifier{name, ann = ()}
+mkVar :: Text -> Surface.Identifier ()
+mkVar name = Surface.Identifier{name, ann = ()}
 
 wrapSimple ::
   Surface.PatternSimpleF Surface.PatternSimple Surface.Type () ->
@@ -71,7 +71,7 @@ varPattern name =
   wrapPattern $
     Surface.PatSimpleF $
       Surface.PatSimVarF
-        ( Surface.PatternVariableF
+        ( Surface.PatternVarF
             { ref = Nothing
             , mut = Nothing
             , name = mkVar name
@@ -87,15 +87,15 @@ tuplePattern ps =
 
 constructorPattern ::
   Text ->
-  Maybe [Surface.SimpleTypeIdentifier ()] ->
-  Maybe (Surface.PatternFieldsF Surface.Pattern Surface.Type ()) ->
+  Maybe [Surface.Identifier ()] ->
+  Surface.PatternFieldsF Surface.Pattern Surface.Type () ->
   Surface.Pattern ()
 constructorPattern name params fields =
   wrapPattern $
     Surface.PatSimpleF
       ( Surface.PatSimConstructorAppF
           Surface.PatternConsturctorAppF
-            { name = anyType Surface.SimpleTypeIdentifier{name, ann = ()}
+            { name = anyType Surface.Identifier{name, ann = ()}
             , typeParams =
                 params <&> \params' ->
                   Surface.BindersF
@@ -111,7 +111,8 @@ constructorPattern name params fields =
                               }
                     , ann = ()
                     }
-            , fields = (,()) <$> fields
+            , fields
+            , fieldsAnn = ()
             , ann = ()
             }
       )
@@ -179,11 +180,7 @@ spec = describe "Pattern parser (minimal subset)" do
     testParser "(x, y)" pPattern $ shouldBeParsed (`shouldBe` tuplePattern [varPattern "x", varPattern "y"])
 
   it "parses constructor without arguments None" do
-    let expected =
-          constructorPattern
-            "None"
-            Nothing
-            Nothing
+    let expected = varPattern "None"
     testParser "None" pPattern $ shouldBeParsed (`shouldBe` expected)
 
   it "parses constructor Some(1)" do
@@ -191,7 +188,7 @@ spec = describe "Pattern parser (minimal subset)" do
           constructorPattern
             "Some"
             Nothing
-            (Just (fieldsTuple [literalIntPattern 1]))
+            (fieldsTuple [literalIntPattern 1])
     testParser "Some(1)" pPattern $ shouldBeParsed (`shouldBe` expected)
 
   it "parses constructor with named fields Cons { head = 1, tail = xs }" do
@@ -199,12 +196,10 @@ spec = describe "Pattern parser (minimal subset)" do
           constructorPattern
             "Cons"
             Nothing
-            ( Just
-                ( fieldsNamed
-                    [ mkFieldNamed "head" (literalIntPattern 1)
-                    , mkFieldNamed "tail" (varPattern "xs")
-                    ]
-                )
+            ( fieldsNamed
+                [ mkFieldNamed "head" (literalIntPattern 1)
+                , mkFieldNamed "tail" (varPattern "xs")
+                ]
             )
     testParser "Cons { head = 1, tail = xs }" pPattern $ shouldBeParsed (`shouldBe` expected)
 
@@ -213,5 +208,5 @@ spec = describe "Pattern parser (minimal subset)" do
           constructorPattern
             "Cons"
             Nothing
-            (Just (fieldsNamed [mkFieldNamedPun "head", mkFieldNamedPun "tail"]))
+            (fieldsNamed [mkFieldNamedPun "head", mkFieldNamedPun "tail"])
     testParser "Cons { head, tail }" pPattern $ shouldBeParsed (`shouldBe` expected)

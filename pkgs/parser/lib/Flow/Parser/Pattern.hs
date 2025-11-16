@@ -10,8 +10,8 @@ import Flow.AST.Surface.Common qualified as Surface
 import Flow.AST.Surface.Constraint qualified as Surface
 import Flow.AST.Surface.Pattern qualified as Surface
 import Flow.Lexer qualified as Lexer
-import Flow.Parser.Common (HasAnn, Parser, SourceSpan (..), pSimpleVarIdentifier, single)
-import Flow.Parser.Constraint (pAnyTypeIdentifier, pBindersWoConstraints)
+import Flow.Parser.Common (HasAnn, Parser, SourceSpan (..), pIdentifier, single)
+import Flow.Parser.Constraint (pQualifiedIdentifier, pBindersWoConstraints)
 import Flow.Parser.Literal (literal)
 
 pPattern ::
@@ -36,15 +36,17 @@ pPatternSimple ::
 pPatternSimple pPat pTy =
   Megaparsec.choice
     [ pWildcard
-    , pVar <&> \var -> (Surface.PatSimVarF var, var.ann)
     , pTuple pPat
-    , pCons pPat pTy <&> \cons ->
+    , Megaparsec.try (pConsApp pPat pTy) <&> \cons ->
         (Surface.PatSimConstructorAppF cons, cons.ann)
+    , Megaparsec.try pVar <&> \var -> (Surface.PatSimVarF var, var.ann)
+    , Megaparsec.try (pQualifiedIdentifier pTy) <&> \cons ->
+        (Surface.PatSimConstructorF cons, cons.ann)
     ]
 
 pWildcard :: Parser (Surface.PatternSimpleF pat ty SourceSpan, SourceSpan)
 pWildcard = do
-  tok <- single (Lexer.Punctuation Lexer.Underscore)
+  tok <- single (Lexer.Identifier "_")
   pure (Surface.PatSimWildcardF, tok.span)
 
 pLiteral :: Parser (Surface.PatternF pat ty SourceSpan, SourceSpan)
@@ -52,13 +54,14 @@ pLiteral = do
   (lit, ann) <- literal
   pure (Surface.PatLiteralF lit, ann)
 
-pVar :: Parser (Surface.PatternVariableF pat ty SourceSpan)
+pVar :: Parser (Surface.PatternVarF SourceSpan)
 pVar = Megaparsec.label "pattern variable" do
   ref <- Megaparsec.optional (single (Lexer.Keyword Lexer.Ref))
   mut <- Megaparsec.optional (single (Lexer.Keyword Lexer.Mut))
-  name <- pSimpleVarIdentifier
+  name <- pIdentifier
+  Megaparsec.notFollowedBy (single (Lexer.Punctuation Lexer.ColonColon))
   pure
-    Surface.PatternVariableF
+    Surface.PatternVarF
       { ref = (.span) <$> ref
       , mut = (.span) <$> mut
       , name = name
@@ -83,27 +86,23 @@ pTuple p = do
     , SourceSpan{start = tokS.span.start, end = tokE.span.end}
     )
 
-pCons ::
+pConsApp ::
   forall pat ty.
   (HasAnn pat SourceSpan, HasAnn ty SourceSpan) =>
   Parser (pat SourceSpan) ->
   Parser (ty SourceSpan) ->
   Parser (Surface.PatternConsturctorAppF pat ty SourceSpan)
-pCons pPat pTy = do
-  consName <- pAnyTypeIdentifier pTy
+pConsApp pPat pTy = do
+  consName <- pQualifiedIdentifier pTy
   typeParams <- Megaparsec.optional (pBindersWoConstraints pTy)
-  fields <- Megaparsec.optional pFields
-  let end = case fields of
-        Just (_, ann) -> ann.end
-        Nothing -> case typeParams of
-          Just params -> params.ann.end
-          Nothing -> consName.ann.end
+  (fields, fieldsAnn) <- pFields
   pure
     Surface.PatternConsturctorAppF
       { name = consName
-      , typeParams = typeParams
-      , fields = fields
-      , ann = Lexer.SourceSpan{start = consName.ann.start, end}
+      , typeParams
+      , fields
+      , fieldsAnn
+      , ann = Lexer.SourceSpan{start = consName.ann.start, end = fieldsAnn.end}
       }
  where
   pFields = do
@@ -158,7 +157,7 @@ pCons pPat pTy = do
 
   pFieldNamedValue :: Parser (Surface.PatternFieldNamedValueF pat ty SourceSpan)
   pFieldNamedValue = do
-    name <- pSimpleVarIdentifier
+    name <- pIdentifier
     _ <- single (Lexer.Punctuation Lexer.Assign)
     value <- pPat
     pure
@@ -172,7 +171,7 @@ pCons pPat pTy = do
   pFieldNamedPunning = do
     ref <- Megaparsec.optional (single (Lexer.Keyword Lexer.Ref))
     mut <- Megaparsec.optional (single (Lexer.Keyword Lexer.Mut))
-    name <- pSimpleVarIdentifier
+    name <- pIdentifier
     optional <- Megaparsec.optional $ single (Lexer.Punctuation Lexer.Question)
     pure
       Surface.PatternFieldNamedPunningF

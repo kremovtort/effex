@@ -12,15 +12,12 @@ import Flow.AST.Surface.Callable (
  )
 import Flow.AST.Surface.Common (
   RegionIdentifier,
-  SimpleTypeIdentifier,
-  SimpleVarIdentifier,
+  Identifier,
  )
 import Flow.AST.Surface.Constraint (
-  AnyTypeIdentifier,
-  AnyVarIdentifier,
   BindersAppF,
   BindersWoConstraintsF,
-  WhereBlockF,
+  WhereBlockF, QualifiedIdentifierF,
  )
 import Flow.AST.Surface.Literal (Literal)
 import Flow.AST.Surface.Syntax (
@@ -40,10 +37,9 @@ data ExpressionF stmt simPat pat ty expr ann
   = ELiteral Literal -- 0 | true | "str"
   | EOfType (expr ann) (ty ann) -- expr : T
   | EParens (expr ann) -- (expr)
-  | EVar (AnyVarIdentifier ty ann) -- ident | someModule::ident
-  | EConstructor (AnyTypeIdentifier ty ann) -- EnumVariant | Some | Cons
+  | EIdent (QualifiedIdentifierF ty ann) -- ident | someModule::ident
   | EIndex (expr ann) (expr ann) -- expr[index]
-  | EDotAccess (expr ann) (AnyVarIdentifier ty ann) -- expr.ident
+  | EDotAccess (expr ann) (QualifiedIdentifierF ty ann) -- expr.ident
   | EUnOpF (UnOpExpression expr ann) -- -a | !a | *a | &a | &mut a | &'s mut a
   | EBinOpF (BinOpExpression expr ann) -- a * b | a + b | a ++ b | etc
   | EAppF (AppF ty expr ann) -- f(a, b, c) | f(a, b, c) with {}
@@ -130,7 +126,7 @@ data LambdaFullF stmt ty expr ann = LambdaFullF
 
 data LambdaArgF ty ann = LambdaArgF
   { mut :: Maybe ann
-  , name :: SimpleVarIdentifier ann
+  , name :: Identifier ann
   , type_ :: Maybe (ty ann)
   , ann :: ann
   }
@@ -146,7 +142,7 @@ data HandleExpressionF stmt simPat ty expr ann = HandleExpressionF
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data HandleReturningF ty ann = HandleReturningF
-  { binder :: SimpleTypeIdentifier ann
+  { binder :: Identifier ann
   , result :: ty ann
   , ann :: ann
   }
@@ -168,8 +164,8 @@ data EffectItemDefinitionF stmt simPat ty expr ann
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data HandleReturningBlockF stmt ty expr ann = HandleReturningBlockF
-  { arg :: SimpleVarIdentifier ann
-  , argType :: SimpleTypeIdentifier ann
+  { arg :: Identifier ann
+  , argType :: Identifier ann
   , body :: CodeBlockF stmt expr ann
   , ann :: ann
   }
@@ -190,7 +186,7 @@ data AppArgsF expr ann
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data ArgNamedF expr ann = ArgNamedF
-  { name :: SimpleVarIdentifier ann
+  { name :: Identifier ann
   , value :: Maybe (expr ann)
   , ann :: ann
   }

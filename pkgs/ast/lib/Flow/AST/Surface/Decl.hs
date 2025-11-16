@@ -16,16 +16,16 @@ import Flow.AST.Surface.Callable (
   OpInfixDeclarationF,
   OpInfixDefinitionF,
  )
-import Flow.AST.Surface.Common (Pub, SimpleTypeIdentifier, SimpleVarIdentifier)
+import Flow.AST.Surface.Common (Pub, Identifier)
 import Flow.AST.Surface.Constraint (
   BindersWoConstraintsF,
   TypeDefinitionF,
-  WhereBlockF, AnyTypeIdentifier, BindersAppF, KindTreeRootF,
+  WhereBlockF, QualifiedIdentifierF, BindersAppF, KindTreeRootF,
  )
 import Flow.AST.Surface.Syntax (LetDefinitionF)
 
 data StructF ty ann = StructF
-  { name :: SimpleTypeIdentifier ann
+  { name :: Identifier ann
   , typeParams :: Maybe (BindersWoConstraintsF ty ann)
   , whereBlock :: Maybe (WhereBlockF ty ann)
   , fields :: FieldsDeclF ty ann
@@ -40,14 +40,14 @@ data FieldsDeclF ty ann
 
 data FieldDeclF ty ann = FieldDeclF
   { pub :: Maybe (Pub ann)
-  , name :: SimpleVarIdentifier ann
+  , name :: Identifier ann
   , type_ :: ty ann
   , ann :: ann
   }
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data EnumF ty ann = EnumF
-  { name :: SimpleTypeIdentifier ann
+  { name :: Identifier ann
   , typeParams :: Maybe (BindersWoConstraintsF ty ann)
   , whereBlock :: Maybe (WhereBlockF ty ann)
   , variants :: EnumVariantsF ty ann
@@ -61,14 +61,14 @@ data EnumVariantsF ty ann
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data EnumVariantF ty ann = EnumVariantF
-  { name :: SimpleTypeIdentifier ann
+  { name :: Identifier ann
   , fields :: Maybe (FieldsDeclF ty ann)
   , ann :: ann
   }
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data EnumVariantGeneralizedF ty ann = EnumVariantGeneralizedF
-  { name :: SimpleTypeIdentifier ann
+  { name :: Identifier ann
   , typeParams :: Maybe (BindersWoConstraintsF ty ann)
   , fields :: Maybe (FieldsDeclF ty ann)
   , result :: ty ann
@@ -86,7 +86,7 @@ data EnumVariantGeneralizedSimpleF ty ann = EnumVariantGeneralizedSimpleF
 
 data TraitF stmt ty expr ann = TraitF
   { sealed :: Bool
-  , name :: SimpleTypeIdentifier ann
+  , name :: Identifier ann
   , typeParams :: BindersWoConstraintsF ty ann
   , superTraits :: Maybe (NonEmptyVector (ty ann))
   , traitBody :: Vector (TraitItemF stmt ty expr ann)
@@ -112,7 +112,7 @@ data TraitItemVariantF stmt ty expr ann
 
 data ImplF stmt simPat ty expr ann = ImplF
   { implParams :: Maybe (BindersWoConstraintsF ty ann)
-  , trait :: AnyTypeIdentifier ty ann
+  , trait :: QualifiedIdentifierF ty ann
   , traitParams :: BindersAppF ty ann
   , whereBlock :: Maybe (WhereBlockF ty ann)
   , body :: Vector (ImplItemVariantF stmt simPat ty expr ann)
@@ -129,7 +129,7 @@ data ImplItemVariantF stmt simPat ty expr ann
 
 data EffectF stmt ty expr ann = EffectF
   { sealed :: Bool
-  , name :: SimpleTypeIdentifier ann
+  , name :: Identifier ann
   , typeParams :: Maybe (BindersWoConstraintsF ty ann)
   , superEffects :: Maybe (NonEmptyVector (ty ann))
   , whereBlock :: Maybe (WhereBlockF ty ann)
@@ -155,7 +155,7 @@ data EffectItemVariantF stmt ty expr ann
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data TypeDeclarationF ty ann = TypeDeclarationF
-  { name :: SimpleTypeIdentifier ann
+  { name :: Identifier ann
   , kindShort :: Maybe (KindTreeRootF ty ann, ann)
   , type_ :: Maybe (ty ann)
   , ann :: ann
@@ -163,7 +163,7 @@ data TypeDeclarationF ty ann = TypeDeclarationF
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data LetDeclarationF ty ann = LetDeclarationF
-  { name :: SimpleVarIdentifier ann
+  { name :: Identifier ann
   , type_ :: ty ann
   , ann :: ann
   }

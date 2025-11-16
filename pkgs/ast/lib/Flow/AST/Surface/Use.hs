@@ -4,7 +4,7 @@ import "base" GHC.Generics (Generic)
 import "tree-diff" Data.TreeDiff.Class (ToExpr)
 import "vector" Data.Vector (Vector)
 
-import Flow.AST.Surface.Common (ModuleIdentifier, SimpleTypeIdentifier, SimpleVarIdentifier)
+import Flow.AST.Surface.Common (Identifier)
 import Data.Vector.NonEmpty (NonEmptyVector)
 
 data UseClause ann = UseClause
@@ -17,16 +17,15 @@ data UseClause ann = UseClause
 data UseClauseRoot ann
   = UsClSelf ann
   | UsClSupers (NonEmptyVector ann)
-  | UsClPackage (ModuleIdentifier ann)
+  | UsClPackage (Identifier ann)
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data UseTree ann
-  = UseTrBranch (ModuleIdentifier ann) (UseTree ann)
+  = UseTrBranch (Identifier ann) (UseTree ann)
   | UseTrNested (Vector (UseTree ann))
   | UseTrLeafWildcard ann
-  | UseTrLeafVar (UseTreeLeaf SimpleVarIdentifier ann)
-  | UseTrLeafType (UseTreeLeaf SimpleTypeIdentifier ann)
-  | UseTrLeafMethod (UseTreeLeaf SimpleVarIdentifier ann)
+  | UseTrLeafIdent (UseTreeLeaf Identifier ann)
+  | UseTrLeafMethod (UseTreeLeaf Identifier ann)
   | UseTrLeafMethodAsFn (UseTreeLeafMethodAsFn ann)
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
@@ -38,8 +37,8 @@ data UseTreeLeaf f ann = UseTreeLeaf
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data UseTreeLeafMethodAsFn ann = UseTreeLeafMethodAsFn
-  { use :: SimpleVarIdentifier ann
-  , as :: SimpleVarIdentifier ann
+  { use :: Identifier ann
+  , as :: Identifier ann
   , ann :: ann
   }
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)

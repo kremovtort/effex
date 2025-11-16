@@ -1,9 +1,9 @@
 module Flow.AST.Surface.Type where
 
 import Data.Vector.NonEmpty (NonEmptyVector)
-import Flow.AST.Surface.Common (RegionIdentifier, SimpleVarIdentifier)
+import Flow.AST.Surface.Common (RegionIdentifier, Identifier)
 import Flow.AST.Surface.Constraint (
-  AnyTypeIdentifier,
+  QualifiedIdentifierF,
   BindersAppF,
   BindersWoConstraintsF,
   WhereBlockF,
@@ -16,7 +16,7 @@ data TypeF ty ann
   = TyWildcardF -- _
   | TyRegionF (RegionIdentifier ann) -- 's
   | TyBuiltinF Builtin
-  | TyIdentifierF (AnyTypeIdentifier ty ann) -- MyType
+  | TyIdentifierF (QualifiedIdentifierF ty ann) -- MyType
   | TyParensF (ty ann) -- (A)
   | TyAppF (AppF ty ann) -- Option<A>
   | TyTupleF (NonEmptyVector (ty ann)) -- (A, B, C)
@@ -31,26 +31,6 @@ data TypeF ty ann
 data Builtin
   = BuiltinUnit
   | BuiltinNever
-  | BuiltinBool
-  | BuiltinI8
-  | BuiltinI16
-  | BuiltinI32
-  | BuiltinI64
-  | BuiltinI128
-  | BuiltinISize
-  | BuiltinU8
-  | BuiltinU16
-  | BuiltinU32
-  | BuiltinU64
-  | BuiltinU128
-  | BuiltinUSize
-  | BuiltinF32
-  | BuiltinF64
-  | BuiltinF128
-  | BuiltinByte
-  | BuiltinByteString
-  | BuiltinChar
-  | BuiltinString
   deriving (Eq, Ord, Show, Generic, ToExpr)
 
 data AppF ty ann = AppF -- Option<A>
@@ -104,12 +84,11 @@ data FnEffectRowF ty ann = FnEffectRowF
 
 data FnEffectAtomF ty ann
   = FnEffectAtomTypeF (ty ann) -- E1
-  | FnEffectAtomNameTypeF (SimpleVarIdentifier ann) (ty ann) -- e1: E1
+  | FnEffectAtomNameTypeF (Identifier ann) (ty ann) -- e1: E1
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data EffectRowF ty ann = EffectRowF
-  { regions :: Vector (RegionIdentifier ann)
-  , effects :: Vector (ty ann)
+  { effects :: Vector (ty ann)
   , tailVars :: Vector (ty ann, ann)
   , ann :: ann
   }

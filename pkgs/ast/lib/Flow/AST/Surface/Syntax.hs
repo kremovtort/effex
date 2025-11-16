@@ -6,7 +6,7 @@ import "vector" Data.Vector (Vector)
 import "base" Prelude hiding (Enum)
 
 import Data.Vector.NonEmpty (NonEmptyVector)
-import Flow.AST.Surface.Common (SimpleVarIdentifier, RegionIdentifier)
+import Flow.AST.Surface.Common (Identifier, RegionIdentifier)
 import Flow.AST.Surface.Use (UseClause)
 
 data UnitF a = UnitF
@@ -17,8 +17,8 @@ data StatementF stmt lhsExpr simPat pat ty expr ann
   = SLetF (LetDefinitionF simPat ty expr ann)
   | SAssignF (AssignStatementF lhsExpr expr ann)
   | SReturnF (expr ann) ann
-  | SContinueF (Maybe (SimpleVarIdentifier ann)) ann
-  | SBreakF (Maybe (SimpleVarIdentifier ann)) ann
+  | SContinueF (Maybe (Identifier ann)) ann
+  | SBreakF (Maybe (Identifier ann)) ann
   | SMatchF (MatchExpressionF pat expr ann)
   | SIfF (IfExpressionF stmt pat expr ann)
   | SLoopF (LoopExpressionF stmt expr ann)
@@ -44,9 +44,9 @@ data AssignStatementF lhsExpr expr ann = AssignStatementF
 
 data LHSExpressionF lhsExpr expr ann
   = LHSEWildcard
-  | LHSEVar (SimpleVarIdentifier ann)
+  | LHSEVar (Identifier ann)
   | LHSEIndex (lhsExpr ann) (expr ann)
-  | LHSEDotAccess (lhsExpr ann) (SimpleVarIdentifier ann)
+  | LHSEDotAccess (lhsExpr ann) (Identifier ann)
   | LHSEUnOp (LHSUnOpExpression expr ann)
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
@@ -109,14 +109,14 @@ data LetConditionF pat expr ann = LetConditionF
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data LoopExpressionF stmt expr ann = LoopExpressionF
-  { label :: Maybe (SimpleVarIdentifier ann)
+  { label :: Maybe (Identifier ann)
   , body :: CodeBlockF stmt expr ann
   , ann :: ann
   }
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data WhileStatementF stmt pat expr ann = WhileStatementF
-  { label :: Maybe (SimpleVarIdentifier ann)
+  { label :: Maybe (Identifier ann)
   , condition :: ConditionF pat expr ann
   , body :: CodeBlockF stmt expr ann
   , ann :: ann
@@ -124,7 +124,7 @@ data WhileStatementF stmt pat expr ann = WhileStatementF
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data ForStatementF stmt simPat expr ann = ForStatementF
-  { label :: Maybe (SimpleVarIdentifier ann, ann)
+  { label :: Maybe (Identifier ann, ann)
   , pattern :: simPat ann
   , iterable :: expr ann
   , body :: CodeBlockF stmt expr ann

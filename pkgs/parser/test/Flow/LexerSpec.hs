@@ -275,9 +275,6 @@ punctuationSpec = describe "Punctuation" do
   it "parses '?'" $
     parse tokens "" "?" `shouldParse` singleToken (Punctuation Question)
 
-  it "parses '_'" $
-    parse tokens "" "_" `shouldParse` singleToken (Punctuation Underscore)
-
   it "parses '{'" $
     parse tokens "" "{" `shouldParse` singleToken (Punctuation LeftBrace)
 

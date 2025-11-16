@@ -17,10 +17,9 @@ import Flow.AST.Surface (
   Type (..),
  )
 import Flow.AST.Surface.Callable qualified as Surface
-import Flow.AST.Surface.Common (SimpleVarIdentifier (..))
+import Flow.AST.Surface.Common (Identifier (..))
 import Flow.AST.Surface.Constraint (
-  AnyTypeIdentifier (..),
-  AnyVarIdentifier (..),
+  QualifiedIdentifierF (..),
   BindersF (..),
  )
 import Flow.AST.Surface.Expr (
@@ -53,13 +52,11 @@ import Flow.Parser.Common (
   SourceSpan (..),
   WithPos (..),
   pRegionIdentifier,
-  pSimpleTypeIdentifier,
-  pSimpleVarIdentifier,
+  pIdentifier,
   single,
  )
 import Flow.Parser.Constraint (
-  pAnyTypeIdentifier,
-  pAnyVarIdentifier,
+  pQualifiedIdentifier,
   pBindersAppValueLevel,
   pBindersWoConstraints,
   pWhereBlockHead,
@@ -73,7 +70,7 @@ import Flow.Parser.With (pWithApp, pWithBlock)
 
 pWildcard :: Parser SourceSpan
 pWildcard = do
-  tok <- single (Lexer.Punctuation Lexer.Underscore)
+  tok <- single (Lexer.Identifier "_")
   pure tok.span
 
 pLiteral :: Parser (Literal, SourceSpan)
@@ -88,11 +85,11 @@ pParens expr = do
   tokE <- single (Lexer.Punctuation Lexer.RightParen)
   pure (expr', SourceSpan{start = tokS.span.start, end = tokE.span.end})
 
-pVar ::
+pIdent ::
   (HasAnn ty SourceSpan) =>
   Parser (ty SourceSpan) ->
-  Parser (AnyVarIdentifier ty Lexer.SourceSpan)
-pVar = pAnyVarIdentifier
+  Parser (QualifiedIdentifierF ty Lexer.SourceSpan)
+pIdent = pQualifiedIdentifier
 
 pOfTypeSuffix ::
   Parser (ty SourceSpan) ->
@@ -106,8 +103,8 @@ pOfTypeSuffix pTy expr = Megaparsec.label "of type" do
 pConstructor ::
   (HasAnn ty SourceSpan) =>
   Parser (ty SourceSpan) ->
-  Parser (AnyTypeIdentifier ty SourceSpan)
-pConstructor = pAnyTypeIdentifier
+  Parser (QualifiedIdentifierF ty SourceSpan)
+pConstructor = pQualifiedIdentifier
 
 pIndexSuffix ::
   Parser (expr SourceSpan) ->
@@ -130,10 +127,10 @@ pDotAccessSuffix ::
   (HasAnn ty SourceSpan) =>
   Parser (ty SourceSpan) ->
   expr SourceSpan ->
-  Parser (expr SourceSpan, AnyVarIdentifier ty SourceSpan, SourceSpan)
+  Parser (expr SourceSpan, QualifiedIdentifierF ty SourceSpan, SourceSpan)
 pDotAccessSuffix pTy expr = do
   tokS <- single (Lexer.Punctuation Lexer.Dot)
-  field <- pAnyVarIdentifier pTy
+  field <- pQualifiedIdentifier pTy
   pure (expr, field, SourceSpan{start = tokS.span.start, end = field.ann.end})
 
 pAppSuffix ::
@@ -185,7 +182,7 @@ pAppSuffix pTy pExpr expr = Megaparsec.label "app suffix" do
     pure (AppArgsNamedF (Vector.fromList args), tokE.span.end)
 
   pNamedArg = do
-    name <- pSimpleVarIdentifier
+    name <- pIdentifier
     value <- Megaparsec.optional do
       _ <- single (Lexer.Punctuation Lexer.Assign)
       pExpr
@@ -301,7 +298,7 @@ pLambdaArg ::
   Parser (LambdaArgF ty SourceSpan)
 pLambdaArg pTy = do
   mut <- Megaparsec.optional (single (Lexer.Keyword Lexer.Mut))
-  name <- pSimpleVarIdentifier
+  name <- pIdentifier
   type_ <- Megaparsec.optional do
     _ <- single (Lexer.Punctuation Lexer.Colon)
     pTy
@@ -341,7 +338,7 @@ pHandleExpression pStmt pSimPat pTy pExpr = do
   returning <- Megaparsec.optional do
     returningTok <- single (Lexer.Keyword Lexer.Returning)
     _ <- single (Lexer.Punctuation Lexer.LessThan)
-    binder <- pSimpleTypeIdentifier
+    binder <- pIdentifier
     _ <- single (Lexer.Punctuation Lexer.GreaterThan)
     result <- pTy
     pure $
@@ -391,9 +388,9 @@ pHandleExpression pStmt pSimPat pTy pExpr = do
   pHandleReturningBlock = do
     returningTok <- single (Lexer.Keyword Lexer.Returning)
     _ <- single (Lexer.Punctuation Lexer.LeftParen)
-    arg <- pSimpleVarIdentifier
+    arg <- pIdentifier
     _ <- single (Lexer.Punctuation Lexer.Colon)
-    argType <- pSimpleTypeIdentifier
+    argType <- pIdentifier
     _ <- single (Lexer.Punctuation Lexer.RightParen)
     body <- pCodeBlock pStmt pExpr
     pure $
@@ -436,8 +433,7 @@ pExpression pStmt pSimPat pPat pTy pExpr = do
       [ pLiteral'
       , Megaparsec.try pTuple'
       , pParens'
-      , pVar'
-      , pConstructor'
+      , pIdent'
       , pMatch'
       , pBlock'
       , pHandle'
@@ -469,13 +465,9 @@ pExpression pStmt pSimPat pPat pTy pExpr = do
     (expr, region) <- pParens pExpr
     pure $ Expression (EParens expr) region
 
-  pVar' = do
-    var <- pVar pTy
-    pure $ Expression (EVar var) var.ann
-
-  pConstructor' = do
-    cons <- pConstructor pTy
-    pure $ Expression (EConstructor cons) cons.ann
+  pIdent' = do
+    ident <- pIdent pTy
+    pure $ Expression (EIdent ident) ident.ann
 
   pOp' = pOperators pWithoutOp
 

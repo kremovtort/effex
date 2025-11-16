@@ -17,10 +17,9 @@ import Flow.Parser.Common (
   HasAnn,
   Parser,
   many1,
-  pModuleIdentifier,
+  pIdentifier,
+  pNonQualifiedIdentifier,
   pRegionIdentifier,
-  pSimpleTypeIdentifier,
-  pSimpleVarIdentifier,
   single,
  )
 
@@ -32,7 +31,11 @@ pBindersAppValueLevel pTy = Megaparsec.label "binders app value level" do
   tokS <- single (Lexer.Punctuation Lexer.ColonColonLessThan)
   elems <- Megaparsec.sepEndBy1 pTy (single (Lexer.Punctuation Lexer.Comma))
   tokE <- single (Lexer.Punctuation Lexer.GreaterThan)
-  pure $ Surface.BindersAppF { types = fromJust $ NonEmptyVector.fromList elems, ann = Lexer.SourceSpan tokS.span.start tokE.span.end }
+  pure $
+    Surface.BindersAppF
+      { types = fromJust $ NonEmptyVector.fromList elems
+      , ann = Lexer.SourceSpan tokS.span.start tokE.span.end
+      }
 
 pBindersAppTypeLevel ::
   (HasAnn ty Lexer.SourceSpan) =>
@@ -57,16 +60,16 @@ pQualifierPrefix =
         <$> many1 (single (Lexer.Keyword Lexer.Super) <* single (Lexer.Punctuation Lexer.ColonColon))
     ]
 
-pAnyTypeIdentifier ::
+pQualifiedIdentifier ::
   forall ty.
   (HasAnn ty Lexer.SourceSpan) =>
   Parser (ty Lexer.SourceSpan) ->
-  Parser (Surface.AnyTypeIdentifier ty Lexer.SourceSpan)
-pAnyTypeIdentifier pTy = do
+  Parser (Surface.QualifiedIdentifierF ty Lexer.SourceSpan)
+pQualifiedIdentifier pTy = do
   qualifierPrefix <- Megaparsec.optional pQualifierPrefix
-  qualifier <- Megaparsec.many (Megaparsec.try (pModuleIdentifier <* moduleSeparator))
+  qualifier <- Megaparsec.many (Megaparsec.try (pIdentifier <* moduleSeparator))
   typeQualifier <- Megaparsec.optional $ Megaparsec.try do
-    typeName <- pSimpleTypeIdentifier
+    typeName <- pIdentifier
     typeParams <- pBindersAppTypeLevel pTy
     _ <- single (Lexer.Punctuation Lexer.ColonColon)
     pure
@@ -74,46 +77,13 @@ pAnyTypeIdentifier pTy = do
         { typeName
         , typeParams
         }
-  identifier <- pSimpleTypeIdentifier
+  identifier <- pNonQualifiedIdentifier
   pure $
-    Surface.AnyTypeIdentifier
+    Surface.QualifiedIdentifierF
       { qualifierPrefix
       , qualifier = NonEmptyVector.fromList qualifier
       , typeQualifier
       , identifier
-      , ann =
-          Lexer.SourceSpan
-            { start = case qualifier of
-                [] -> identifier.ann.start
-                q : _ -> q.ann.start
-            , end = identifier.ann.end
-            }
-      }
- where
-  moduleSeparator = single (Lexer.Punctuation Lexer.ColonColon)
-
-pAnyVarIdentifier ::
-  (HasAnn ty Lexer.SourceSpan) =>
-  Parser (ty Lexer.SourceSpan) ->
-  Parser (Surface.AnyVarIdentifier ty Lexer.SourceSpan)
-pAnyVarIdentifier pTy = do
-  qualifierPrefix <- Megaparsec.optional pQualifierPrefix
-  qualifier <- Megaparsec.many (Megaparsec.try (pModuleIdentifier <* moduleSeparator))
-  typeQualifier <- Megaparsec.optional do
-    typeName <- pSimpleTypeIdentifier
-    typeParams <- pBindersAppTypeLevel pTy
-    pure
-      Surface.TypeQualifierF
-        { typeName
-        , typeParams
-        }
-  identifier <- pSimpleVarIdentifier
-  pure $
-    Surface.AnyVarIdentifier
-      { qualifierPrefix
-      , qualifier = NonEmptyVector.fromList qualifier
-      , typeQualifier = typeQualifier
-      , identifier = identifier
       , ann =
           Lexer.SourceSpan
             { start = case qualifier of
@@ -148,7 +118,7 @@ pKindTreeRoot pTy = do
       ]
 
   pKindHole = do
-    tokS <- single (Lexer.Punctuation Lexer.Underscore)
+    tokS <- single (Lexer.Identifier "_")
     typeType <- Megaparsec.optional do
       _ <- single (Lexer.Punctuation Lexer.Colon)
       pTy
@@ -166,7 +136,7 @@ pKindTreeRoot pTy = do
                 }
           }
   pKindParams = do
-    tokS <- single (Lexer.Punctuation Lexer.Underscore)
+    tokS <- single (Lexer.Identifier "_")
     _ <- single (Lexer.Punctuation Lexer.LessThan)
     params <- Megaparsec.sepEndBy1 pKindTree (single (Lexer.Punctuation Lexer.Comma))
     tokE <- single (Lexer.Punctuation Lexer.GreaterThan)
@@ -211,7 +181,7 @@ pBindersWoConstraints pTy = Megaparsec.label "binders with constraints" do
       }
  where
   pBinderWoConstraints = do
-    name <- pSimpleTypeIdentifier
+    name <- pIdentifier
     kindShort <- Megaparsec.optional (pKindTreeRoot pTy)
     typeType <- Megaparsec.optional do
       _ <- single (Lexer.Punctuation Lexer.Colon)
@@ -291,7 +261,7 @@ pTypeDefinition ::
   Parser (Surface.TypeDefinitionF ty Lexer.SourceSpan)
 pTypeDefinition pTy = do
   tokS <- single (Lexer.Keyword Lexer.Type)
-  name <- pSimpleTypeIdentifier
+  name <- pIdentifier
   typeParams <- Megaparsec.optional (pBindersWoConstraints pTy)
   _ <- single (Lexer.Punctuation Lexer.Assign)
   type_ <- pTy

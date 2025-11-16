@@ -21,16 +21,16 @@ import Flow.Parser.SpecHelpers (shouldBe, shouldBeParsed, testParser)
 literalInt :: Integer -> Surface.Expression ()
 literalInt n = Surface.Expression{expr = Surface.ELiteral (Surface.LitInteger n), ann = ()}
 
-var :: Text -> Surface.Expression ()
-var name =
+ident :: Text -> Surface.Expression ()
+ident name =
   Surface.Expression
     { expr =
-        Surface.EVar
-          Surface.AnyVarIdentifier
+        Surface.EIdent
+          Surface.QualifiedIdentifierF
             { qualifierPrefix = Nothing
             , qualifier = mempty
             , typeQualifier = Nothing
-            , identifier = Surface.SimpleVarIdentifier{name, ann = ()}
+            , identifier = Surface.Identifier{name, ann = ()}
             , ann = ()
             }
     , ann = ()
@@ -71,7 +71,7 @@ callUnnamed fname args =
     { expr =
         Surface.EAppF
           Surface.AppF
-            { callee = var fname
+            { callee = ident fname
             , typeParams = Nothing
             , args = Surface.AppArgsUnnamedF (Vector.fromList args)
             , with = Nothing
@@ -86,14 +86,14 @@ callNamed fname args =
     { expr =
         Surface.EAppF
           Surface.AppF
-            { callee = var fname
+            { callee = ident fname
             , typeParams = Nothing
             , args =
                 Surface.AppArgsNamedF
                   ( Vector.fromList
                       ( args <&> \(name, expr) ->
                           Surface.ArgNamedF
-                            { name = Surface.SimpleVarIdentifier name ()
+                            { name = Surface.Identifier{name, ann = ()}
                             , value = Just expr
                             , ann = ()
                             }
@@ -111,7 +111,7 @@ callWithParams fname types args =
     { expr =
         Surface.EAppF
           Surface.AppF
-            { callee = var fname
+            { callee = ident fname
             , typeParams =
                 if not (null types)
                   then
@@ -136,11 +136,11 @@ typeVar name =
   Surface.Type
     { ty =
         Surface.Type.TyIdentifierF
-          Surface.AnyTypeIdentifier
+          Surface.QualifiedIdentifierF
             { qualifierPrefix = Nothing
             , qualifier = Nothing
             , typeQualifier = Nothing
-            , identifier = Surface.SimpleTypeIdentifier{name, ann = ()}
+            , identifier = Surface.Identifier{name, ann = ()}
             , ann = ()
             }
     , ann = ()
@@ -152,11 +152,11 @@ dotExpr base field =
     { expr =
         Surface.EDotAccess
           base
-          Surface.AnyVarIdentifier
+          Surface.QualifiedIdentifierF
             { qualifierPrefix = Nothing
             , qualifier = mempty
             , typeQualifier = Nothing
-            , identifier = Surface.SimpleVarIdentifier{name = field, ann = ()}
+            , identifier = Surface.Identifier{name = field, ann = ()}
             , ann = ()
             }
     , ann = ()
@@ -170,10 +170,10 @@ patternSimpleVar mut name =
   Surface.PatternSimple
     { patternSimple =
         Surface.PatSimVarF
-          ( Surface.PatternVariableF
+          ( Surface.PatternVarF
               { ref = Nothing
               , mut = if mut then Just () else Nothing
-              , name = Surface.SimpleVarIdentifier{name, ann = ()}
+              , name = Surface.Identifier{name, ann = ()}
               , ann = ()
               }
           )
@@ -215,10 +215,10 @@ spec = describe "Expression parser (minimal subset)" do
     testParser "1" pExpression $ shouldBeParsed (`shouldBe` literalInt 1)
 
   it "parses variable x" do
-    testParser "x" pExpression $ shouldBeParsed (`shouldBe` var "x")
+    testParser "x" pExpression $ shouldBeParsed (`shouldBe` ident "x")
 
   it "parses parens (x)" do
-    testParser "(x)" pExpression $ shouldBeParsed (`shouldBe` parens (var "x"))
+    testParser "(x)" pExpression $ shouldBeParsed (`shouldBe` parens (ident "x"))
 
   it "parses unary &x, &mut x, &'s x, -x, !x" do
     let cases =
@@ -229,7 +229,7 @@ spec = describe "Expression parser (minimal subset)" do
           , ("!x", Surface.UnOpNot ())
           ]
     mapM_
-      (\(txt, op) -> testParser txt pExpression $ shouldBeParsed (`shouldBe` unOp op (var "x")))
+      (\(txt, op) -> testParser txt pExpression $ shouldBeParsed (`shouldBe` unOp op (ident "x")))
       cases
 
   it "parses binary 1 + 2 * 3" do
@@ -241,15 +241,15 @@ spec = describe "Expression parser (minimal subset)" do
     testParser "1 + 2 * 3" pExpression $ shouldBeParsed (`shouldBe` expected)
 
   it "parses calls f(a, b) and with named args f { x = 1, y = 2 }" do
-    testParser "f(a, b)" pExpression $ shouldBeParsed (`shouldBe` callUnnamed "f" [var "a", var "b"])
+    testParser "f(a, b)" pExpression $ shouldBeParsed (`shouldBe` callUnnamed "f" [ident "a", ident "b"])
     testParser "f { x = 1, y = 2 }" pExpression $ shouldBeParsed (`shouldBe` callNamed "f" [("x", literalInt 1), ("y", literalInt 2)])
 
   it "parses calls with \"with\" clauses" do
     let source =
           """
           f(a, b) with {
-            Reader<R> = reader_handle(env),
-            state = state_handle(initial),
+            _: Reader<R> <- reader_handle(env),
+            state <- state_handle(initial),
             writer = w,
           }
           """
@@ -259,7 +259,7 @@ spec = describe "Expression parser (minimal subset)" do
     let source =
           """
           my_func(a, b) with {
-            writer = writer_handle() in {
+            writer <- writer_handle() in {
               State<W> = s,
               Reader<R> = r,
             },
@@ -282,21 +282,21 @@ spec = describe "Expression parser (minimal subset)" do
     let source =
           """
           with {
-            let Reader<R> = reader_handle(env);
-            let state: State<S> = state_handle(initial);
+            let! take_error(|e| handle_error(e));
+            let! _: Reader<R> <- reader_handle(env);
+            let! state: State<S> <- state_handle(initial);
 
-            Reader<R> = reader_handle(env);
-            state = state_handle(initial);
-            Reader<R> = r;
-            state = State<S>;
+            _: Reader<R> <- reader_handle(env);
+            state <- state_handle(initial);
+            let! state = _: State<S>;
 
-            let reader = Reader<R>;
-            let state1 = state;
+            state1 <- state_handle(initial);
 
-            let Reader<R>, State<S> = reader_state_handle(env, initial);
-            let reader, state2 = reader_state_handle(env, initial);
-            let reader1: Reader<R>, state2: State<S> = reader_state_handle(env, initial);
-            reader1, state2 = reader_state_handle(env, initial);
+            let! _: Reader<R>, _: State<S> <- reader_state_handle(env, initial);
+            let! reader, state2 <- reader_state_handle(env, initial);
+            let! reader1: Reader<R>, state2: State<S> <-
+              reader_state_handle(env, initial);
+            reader1, state2 <- reader_state_handle(env, initial);
           } in {
             ()
           }
@@ -304,15 +304,15 @@ spec = describe "Expression parser (minimal subset)" do
     testParser source pExpression $ shouldBeParsed $ const $ pure ()
 
   it "parses call with type/region params f<'s, T>(a)" do
-    let expected = callWithParams "f" [regionIdent "s", typeVar "T"] [var "a"]
+    let expected = callWithParams "f" [regionIdent "s", typeVar "T"] [ident "a"]
     testParser "f::<'s, T>(a)" pExpression $ shouldBeParsed (`shouldBe` expected)
 
   it "parses chained access a.b[0]" do
-    let expected = indexExpr (dotExpr (var "a") "b") (literalInt 0)
+    let expected = indexExpr (dotExpr (ident "a") "b") (literalInt 0)
     testParser "a.b[0]" pExpression $ shouldBeParsed (`shouldBe` expected)
 
   it "parses tuple (a, b)" do
-    testParser "(a, b)" pExpression $ shouldBeParsed (`shouldBe` tupleExpr [var "a", var "b"])
+    testParser "(a, b)" pExpression $ shouldBeParsed (`shouldBe` tupleExpr [ident "a", ident "b"])
 
   it "parses full lambda" do
     let source =
@@ -329,7 +329,7 @@ spec = describe "Expression parser (minimal subset)" do
   it "parses simple block { let x = 1; let y = 2; x }" do
     let stmt1 = letStatement "x" (literalInt 1)
         stmt2 = letStatement "y" (literalInt 2)
-        expected = blockExpr [stmt1, stmt2] (Just (var "x"))
+        expected = blockExpr [stmt1, stmt2] (Just (ident "x"))
     testParser "{ let x = 1; let y = 2; x }" pExpression $ shouldBeParsed (`shouldBe` expected)
 
   it "parses sequence of dot accesses with function calls with lambdas" do
@@ -339,7 +339,7 @@ spec = describe "Expression parser (minimal subset)" do
             .map(|y| y + 1)
             .filter(|y| y > 0)
             .sum()
-            .for_each(|y| println(y)) with { Printer = printer_handle() }
+            .for_each(|y| println(y)) with { Printer <- printer_handle() }
           """
     testParser source pExpression $ shouldBeParsed (const $ pure ())
 

@@ -14,7 +14,7 @@ import Flow.Parser.SpecHelpers (testParser, shouldBeParsed, shouldBe)
 lhsVar :: Text -> Surface.LHSExpression ()
 lhsVar name =
   Surface.LHSExpression
-    { lhsExpression = Syn.LHSEVar Surface.SimpleVarIdentifier{name, ann = ()}
+    { lhsExpression = Syn.LHSEVar Surface.Identifier{name, ann = ()}
     , ann = ()
     }
 
@@ -31,7 +31,7 @@ lhsDot lhs field =
     { lhsExpression =
         Syn.LHSEDotAccess
           lhs
-          Surface.SimpleVarIdentifier
+          Surface.Identifier
             { name = field
             , ann = ()
             }
@@ -49,12 +49,12 @@ exprVar :: Text -> Surface.Expression ()
 exprVar name =
   Surface.Expression
     { expr =
-        Surface.EVar
-          ( Surface.AnyVarIdentifier
+        Surface.EIdent
+          ( Surface.QualifiedIdentifierF
               { qualifierPrefix = Nothing
               , qualifier = Nothing
               , typeQualifier = Nothing
-              , identifier = Surface.SimpleVarIdentifier{name, ann = ()}
+              , identifier = Surface.Identifier{name, ann = ()}
               , ann = ()
               }
           )

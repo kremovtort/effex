@@ -11,7 +11,7 @@ import Flow.AST.Surface (
   Expression (..),
   LHSExpression (..),
  )
-import Flow.AST.Surface.Common (SimpleVarIdentifier (..))
+import Flow.AST.Surface.Common (Identifier (..))
 import Flow.AST.Surface.Syntax
 import Flow.Lexer qualified as Lexer
 import Flow.Parser.Common (
@@ -20,7 +20,7 @@ import Flow.Parser.Common (
   SourceSpan (..),
   WithPos (..),
   pRegionIdentifier,
-  pSimpleVarIdentifier,
+  pIdentifier,
   single,
   token,
  )
@@ -113,14 +113,14 @@ pStatement pStmt pLhsExpr pSimPat pPat pTy pExpr = do
 
   continueStatement = do
     continueTok <- single (Lexer.Keyword Lexer.Continue)
-    label <- Megaparsec.optional pSimpleVarIdentifier
+    label <- Megaparsec.optional pIdentifier
     semicolonTok <- single (Lexer.Punctuation Lexer.Semicolon)
     let ann = SourceSpan{start = continueTok.span.start, end = semicolonTok.span.end}
     pure (SContinueF label ann, ann)
 
   breakStatement = do
     breakTok <- single (Lexer.Keyword Lexer.Break)
-    label <- Megaparsec.optional pSimpleVarIdentifier
+    label <- Megaparsec.optional pIdentifier
     semicolonTok <- single (Lexer.Punctuation Lexer.Semicolon)
     let ann = SourceSpan{start = breakTok.span.start, end = semicolonTok.span.end}
     pure (SBreakF label ann, ann)
@@ -202,7 +202,7 @@ pLHSEIndexSuffix expr = do
 pLHSEDotAccessSuffix :: Parser (LHSExpression SourceSpan -> LHSExpression SourceSpan)
 pLHSEDotAccessSuffix = do
   _ <- single (Lexer.Punctuation Lexer.Dot)
-  field' <- pSimpleVarIdentifier
+  field' <- pIdentifier
   pure $ \acc ->
     LHSExpression
       { lhsExpression = LHSEDotAccess acc field'
@@ -219,12 +219,12 @@ pLHSEAtom expr = do
 
 pLHSEWildcard :: Parser (LHSExpression SourceSpan)
 pLHSEWildcard = do
-  tok <- single (Lexer.Punctuation Lexer.Underscore)
+  tok <- single (Lexer.Identifier "_")
   pure $ LHSExpression{lhsExpression = LHSEWildcard, ann = tok.span}
 
 pLHSEVar :: Parser (LHSExpression SourceSpan)
 pLHSEVar = do
-  var <- pSimpleVarIdentifier
+  var <- pIdentifier
   pure $ LHSExpression{lhsExpression = LHSEVar var, ann = var.ann}
 
 pLHSEUnOp :: Parser (Expression SourceSpan) -> Parser (LHSExpression SourceSpan)
@@ -356,7 +356,7 @@ pLoopExpression pStmt pExpr = do
         _ -> Nothing
     _ <- single (Lexer.Punctuation Lexer.Colon)
     pure
-      ( SimpleVarIdentifier
+      ( Identifier
           { name = labelTok.value
           , ann = labelTok.span
           }
@@ -396,7 +396,7 @@ pWhileStatement pStmt pPat pExpr = do
         _ -> Nothing
     _ <- single (Lexer.Punctuation Lexer.Colon)
     pure
-      ( SimpleVarIdentifier labelTok.value labelTok.span
+      ( Identifier labelTok.value labelTok.span
       , SourceSpan
           { start = labelTok.span.start
           , end = labelTok.span.end
@@ -435,7 +435,7 @@ pForStatement pStmt pSimPat pExpr = do
         _ -> Nothing
     _ <- single (Lexer.Punctuation Lexer.Colon)
     pure
-      ( SimpleVarIdentifier labelTok.value labelTok.span
+      ( Identifier labelTok.value labelTok.span
       , SourceSpan
           { start = labelTok.span.start
           , end = labelTok.span.end

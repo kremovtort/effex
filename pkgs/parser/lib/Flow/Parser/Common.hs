@@ -10,9 +10,9 @@ module Flow.Parser.Common (
   single,
   token,
   many1,
-  pModuleIdentifier,
-  pSimpleTypeIdentifier,
-  pSimpleVarIdentifier,
+  sepEndBy1,
+  pIdentifier,
+  pNonQualifiedIdentifier,
   pRegionIdentifier,
   pMethodIdentifier,
   pPub,
@@ -29,13 +29,9 @@ import "containers" Data.Set qualified as Set
 import "megaparsec" Text.Megaparsec (Parsec)
 import "megaparsec" Text.Megaparsec qualified as Megaparsec
 
-import Data.Char qualified as Char
-import Data.Text qualified as Text
 import Flow.AST.Surface.Common (
-  ModuleIdentifier (..),
+  Identifier (..),
   RegionIdentifier (..),
-  SimpleTypeIdentifier (..),
-  SimpleVarIdentifier (..),
  )
 import Flow.AST.Surface.Common qualified as Surface
 import Flow.Lexer qualified as Lexer
@@ -68,60 +64,51 @@ many1 p = do
   rest <- Megaparsec.many p
   pure $ first :| rest
 
-pModuleIdentifier :: Parser (ModuleIdentifier Lexer.SourceSpan)
-pModuleIdentifier = do
+sepEndBy1 :: Parser a -> Parser sep -> Parser (List.NonEmpty a)
+sepEndBy1 p sep = List.NonEmpty.fromList <$> Megaparsec.sepEndBy1 p sep
+
+pIdentifier :: Parser (Identifier Lexer.SourceSpan)
+pIdentifier = do
   tok <-
     token
-      (Set.singleton $ Megaparsec.Label "module identifier")
+      (Set.singleton $ Megaparsec.Label "identifier")
       \case
         Lexer.Identifier i -> Just i
         _ -> Nothing
-  pure $ ModuleIdentifier{name = tok.value, ann = tok.span}
+  pure $ Identifier{name = tok.value, ann = tok.span}
 
-pSimpleTypeIdentifier :: Parser (SimpleTypeIdentifier Lexer.SourceSpan)
-pSimpleTypeIdentifier = do
+pNonQualifiedIdentifier :: Parser (Identifier Lexer.SourceSpan)
+pNonQualifiedIdentifier = do
   tok <-
     token
-      (Set.singleton $ Megaparsec.Label "type identifier (should start with an uppercase letter)")
+      (Set.singleton $ Megaparsec.Label "non qualified identifier")
       \case
-        Lexer.Identifier i
-          | Char.isUpper (Text.head i) -> Just i
+        Lexer.Identifier i -> Just i
         _ -> Nothing
-  pure $ SimpleTypeIdentifier{name = tok.value, ann = tok.span}
-
-pSimpleVarIdentifier :: Parser (SimpleVarIdentifier Lexer.SourceSpan)
-pSimpleVarIdentifier = do
-  tok <-
-    token
-      (Set.singleton $ Megaparsec.Label "variable identifier (should start with a lowercase letter)")
-      \case
-        Lexer.Identifier i
-          | Char.isLower (Text.head i) -> Just i
-        _ -> Nothing
-  pure $ SimpleVarIdentifier{name = tok.value, ann = tok.span}
+  Megaparsec.notFollowedBy (single (Lexer.Punctuation Lexer.ColonColon))
+  pure $ Identifier{name = tok.value, ann = tok.span}
 
 pRegionIdentifier :: Parser (RegionIdentifier Lexer.SourceSpan)
 pRegionIdentifier = do
   tok <-
     token
-      (Set.singleton $ Megaparsec.Label "region identifier (should start with a single quote)")
+      (Set.singleton $ Megaparsec.Label "region identifier")
       \case
         Lexer.Region i -> Just i
         _ -> Nothing
   pure $ RegionIdentifier{name = tok.value, ann = tok.span}
 
-pMethodIdentifier :: Parser (SimpleVarIdentifier Lexer.SourceSpan)
+pMethodIdentifier :: Parser (Identifier Lexer.SourceSpan)
 pMethodIdentifier = do
   dotTok <- single (Lexer.Punctuation Lexer.Dot)
   tok <-
     token
-      (Set.singleton $ Megaparsec.Label "method identifier (should start with lowercase letter)")
+      (Set.singleton $ Megaparsec.Label "method identifier")
       \case
-        Lexer.Identifier i
-          | Char.isLower (Text.head i) -> Just i
+        Lexer.Identifier i -> Just i
         _ -> Nothing
   pure
-    SimpleVarIdentifier
+    Identifier
       { name = tok.value
       , ann = Lexer.SourceSpan dotTok.span.start tok.span.end
       }

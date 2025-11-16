@@ -6,15 +6,15 @@ import "vector" Data.Vector (Vector)
 import "base" Prelude hiding (Enum)
 
 import Flow.AST.Surface.Callable (FnDefinitionF, FnInfixDefinitionF)
-import Flow.AST.Surface.Common (ModuleIdentifier, Pub)
+import Flow.AST.Surface.Common (Identifier, Pub)
 import Flow.AST.Surface.Constraint (TypeDefinitionF)
 import Flow.AST.Surface.Decl qualified as Decl
 import Flow.AST.Surface.Syntax (LetDefinitionF)
 import Flow.AST.Surface.Use (UseClause)
 
 data ModF mod stmt simPat ty expr ann
-  = ModDeclarationF (ModuleIdentifier ann)
-  | ModDefinitionF (ModuleIdentifier ann) (ModDefinitionBodyF mod stmt simPat ty expr ann)
+  = ModDeclarationF (Identifier ann)
+  | ModDefinitionF (Identifier ann) (ModDefinitionBodyF mod stmt simPat ty expr ann)
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 newtype ModDefinitionBodyF mod stmt simPat ty expr ann = ModDefinitionBodyF

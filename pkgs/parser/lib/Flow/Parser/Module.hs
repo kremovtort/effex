@@ -14,7 +14,7 @@ import Flow.AST.Surface.Syntax qualified as Surface
 import Flow.AST.Surface.Use qualified as Surface
 import Flow.Lexer qualified as Lexer
 import Flow.Parser.Callable (pFnDefinition, pFnInfixDefinition)
-import Flow.Parser.Common (HasAnn, Parser, pModuleIdentifier, pPub, single)
+import Flow.Parser.Common (HasAnn, Parser, pIdentifier, pPub, single)
 import Flow.Parser.Constraint (pTypeDefinition)
 import Flow.Parser.Decl (pEffect, pEnum, pStruct, pTrait)
 import Flow.Parser.Syntax (pLetDefinition)
@@ -112,7 +112,7 @@ pModDeclaration ::
   Parser (Surface.ModF mod lhsExpr simPat ty expr Lexer.SourceSpan, Lexer.SourceSpan)
 pModDeclaration = do
   modTok <- single (Lexer.Keyword Lexer.Mod)
-  ident <- pModuleIdentifier
+  ident <- pIdentifier
   tokE <- single (Lexer.Punctuation Lexer.Semicolon)
   pure (Surface.ModDeclarationF ident, Lexer.SourceSpan{start = modTok.span.start, end = tokE.span.end})
 
@@ -131,7 +131,7 @@ pModDefinition ::
   Parser (Surface.ModF mod stmt simPat ty expr Lexer.SourceSpan, Lexer.SourceSpan)
 pModDefinition pMod' pStmt pSimPat pTy pExpr = do
   modTok <- single (Lexer.Keyword Lexer.Mod)
-  ident <- pModuleIdentifier
+  ident <- pIdentifier
   _ <- single (Lexer.Punctuation Lexer.LeftBrace)
   body <- pModDefinitionBody pMod' pStmt pSimPat pTy pExpr
   tokE <- single (Lexer.Punctuation Lexer.RightBrace)

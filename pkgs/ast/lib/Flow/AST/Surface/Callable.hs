@@ -10,9 +10,9 @@ import "base" GHC.Generics (Generic)
 import "tree-diff" Data.TreeDiff.Class (ToExpr)
 import "vector" Data.Vector (Vector)
 
-import Flow.AST.Surface.Common (SimpleVarIdentifier)
+import Flow.AST.Surface.Common (Identifier)
 import Flow.AST.Surface.Constraint (
-  AnyVarIdentifier,
+  QualifiedIdentifierF,
   BindersWoConstraintsF,
   WhereBlockF,
  )
@@ -25,7 +25,7 @@ data CallKind = KFn | KOp
 -- | Receiver header for infix calls
 data ReceiverHeaderF ty ann = ReceiverHeaderF
   { typeParams :: Maybe (BindersWoConstraintsF ty ann)
-  , name :: SimpleVarIdentifier ann
+  , name :: Identifier ann
   , type_ :: ty ann
   , ann :: ann
   }
@@ -45,7 +45,7 @@ data CallableHeader reciever name ty ann = CallableHeader
 
 data ArgF ty ann = ArgF
   { mut :: Maybe ann
-  , name :: SimpleVarIdentifier ann
+  , name :: Identifier ann
   , type_ :: ty ann
   , ann :: ann
   }
@@ -70,14 +70,14 @@ type FnDeclarationF =
   CallableF
     'KFn
     UnitF
-    SimpleVarIdentifier
+    Identifier
     UnitF
 
 type FnInfixDeclarationF ty =
   CallableF
     'KFn
     (ReceiverHeaderF ty)
-    SimpleVarIdentifier
+    Identifier
     UnitF
     ty
 
@@ -85,14 +85,14 @@ type OpDeclarationF =
   CallableF
     'KOp
     UnitF
-    SimpleVarIdentifier
+    Identifier
     UnitF
 
 type OpInfixDeclarationF ty =
   CallableF
     'KOp
     (ReceiverHeaderF ty)
-    SimpleVarIdentifier
+    Identifier
     UnitF
     ty
 
@@ -100,7 +100,7 @@ type FnDefinitionF stmt ty expr =
   CallableF
     'KFn
     UnitF
-    SimpleVarIdentifier
+    Identifier
     (CodeBlockF stmt expr)
     ty
 
@@ -108,7 +108,7 @@ type FnInfixDefinitionF stmt ty expr =
   CallableF
     'KFn
     (ReceiverHeaderF ty)
-    SimpleVarIdentifier
+    Identifier
     (CodeBlockF stmt expr)
     ty
 
@@ -116,7 +116,7 @@ type OpDefinitionF stmt ty expr =
   CallableF
     'KOp
     UnitF
-    (AnyVarIdentifier ty)
+    (QualifiedIdentifierF ty)
     (CodeBlockF stmt expr)
     ty
 
@@ -124,6 +124,6 @@ type OpInfixDefinitionF stmt ty expr =
   CallableF
     'KOp
     (ReceiverHeaderF ty)
-    (AnyVarIdentifier ty)
+    (QualifiedIdentifierF ty)
     (CodeBlockF stmt expr)
     ty

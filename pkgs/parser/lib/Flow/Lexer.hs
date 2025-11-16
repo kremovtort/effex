@@ -87,6 +87,7 @@ data Keyword
   | Impl
   | In
   | Let
+  | LetBang
   | Loop
   | Match
   | Mod
@@ -160,7 +161,6 @@ data Punctuation
   | Hash
   | Dollar
   | Question
-  | Underscore
   | LeftBrace
   | RightBrace
   | AtLeftBracket
@@ -418,6 +418,7 @@ keywordText = \case
   Impl -> "impl"
   In -> "in"
   Let -> "let"
+  LetBang -> "let!"
   Loop -> "loop"
   Match -> "match"
   Mod -> "mod"
@@ -491,7 +492,6 @@ punctuationText = \case
   Hash -> "#"
   Dollar -> "$"
   Question -> "?"
-  Underscore -> "_"
   LeftBrace -> "{"
   RightBrace -> "}"
   AtLeftBracket -> "@["
@@ -518,8 +518,6 @@ mkKeyword kw = lexeme do
   pure kw
 
 mkPunctuation :: Punctuation -> Lexer Punctuation
-mkPunctuation Underscore = Megaparsec.try $ lexeme do
-  Underscore <$ Megaparsec.Char.char '_' <* Megaparsec.notFollowedBy alphaNumUnderscoreChar
 mkPunctuation p = lexeme do
   p <$ Megaparsec.Char.string (punctuationText p)
 

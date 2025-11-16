@@ -15,9 +15,7 @@ import Flow.Lexer qualified as Lexer
 import Flow.Parser.Common (
   Parser,
   pMethodIdentifier,
-  pModuleIdentifier,
-  pSimpleTypeIdentifier,
-  pSimpleVarIdentifier,
+  pIdentifier,
   single,
  )
 
@@ -42,7 +40,7 @@ pUseClause = do
           <$> Megaparsec.sepEndBy1
             (single (Lexer.Keyword Lexer.Super))
             (single (Lexer.Punctuation Lexer.Comma))
-      , Surface.UsClPackage <$> pModuleIdentifier
+      , Surface.UsClPackage <$> pIdentifier
       ]
 
   pUseTree =
@@ -51,12 +49,11 @@ pUseClause = do
       , Megaparsec.try pUseTreeBranch
       , Megaparsec.try pUseTreeLeafMethodAsFn
       , Megaparsec.try pUseTreeLeafMethod
-      , Megaparsec.try pUseTreeLeafVar
-      , Megaparsec.try pUseTreeLeafType
+      , Megaparsec.try pUseTreeLeafIdent
       , Megaparsec.try pUseTreeLeafWildcard
       ]
   pUseTreeBranch = do
-    ident <- pModuleIdentifier
+    ident <- pIdentifier
     _ <- single (Lexer.Punctuation Lexer.ColonColon)
     tree <- pUseTree
     pure $ Surface.UseTrBranch ident tree
@@ -85,18 +82,14 @@ pUseClause = do
     leaf <- pUseTreeLeaf pMethodIdentifier
     pure $ Surface.UseTrLeafMethod leaf
 
-  pUseTreeLeafVar = do
-    leaf <- pUseTreeLeaf pSimpleVarIdentifier
-    pure $ Surface.UseTrLeafVar leaf
-
-  pUseTreeLeafType = do
-    leaf <- pUseTreeLeaf pSimpleTypeIdentifier
-    pure $ Surface.UseTrLeafType leaf
+  pUseTreeLeafIdent = do
+    leaf <- pUseTreeLeaf pIdentifier
+    pure $ Surface.UseTrLeafIdent leaf
 
   pUseTreeLeafMethodAsFn = do
     use <- pMethodIdentifier
     _ <- single (Lexer.Keyword Lexer.As)
-    as <- pSimpleVarIdentifier
+    as <- pIdentifier
     pure $
       Surface.UseTrLeafMethodAsFn
         Surface.UseTreeLeafMethodAsFn

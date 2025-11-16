@@ -13,9 +13,9 @@ import Flow.AST.Surface.Type qualified as Surface
 import Flow.Parser.SpecHelpers (shouldBe, shouldBeParsed, testParser)
 import Flow.Parser.Type qualified as PType
 
-anyType :: Surface.SimpleTypeIdentifier () -> Surface.AnyTypeIdentifier ty ()
+anyType :: Surface.Identifier () -> Surface.QualifiedIdentifierF Surface.Type ()
 anyType ident =
-  Surface.AnyTypeIdentifier
+  Surface.QualifiedIdentifierF
     { qualifierPrefix = Nothing
     , qualifier = Nothing
     , typeQualifier = Nothing
@@ -29,7 +29,7 @@ simpleType name =
     { ty =
         Surface.TyIdentifierF
           ( anyType
-              Surface.SimpleTypeIdentifier
+              Surface.Identifier
                 { name = name
                 , ann = ()
                 }
@@ -92,8 +92,7 @@ effectRow effects tailVar =
     { ty =
         Surface.TyEffectRowF
           Surface.EffectRowF
-            { regions = Vector.empty
-            , effects = Vector.fromList effects
+            { effects = Vector.fromList effects
             , tailVars = maybe Vector.empty (Vector.singleton . (,())) tailVar
             , ann = ()
             }
@@ -102,15 +101,15 @@ effectRow effects tailVar =
 
 spec :: Spec
 spec = describe "Type parser (minimal subset)" do
-  it "parses builtin bool" do
-    testParser "bool" PType.pType $ shouldBeParsed (`shouldBe` builtin Surface.BuiltinBool)
+  it "parses bool" do
+    testParser "bool" PType.pType $ shouldBeParsed (`shouldBe` simpleType "bool")
 
   it "parses simple identifier Option" do
     testParser "Option" PType.pType $ shouldBeParsed (`shouldBe` simpleType "Option")
 
   it "parses application Option<i32>" do
     let headT = simpleType "Option"
-        i32T = builtin Surface.BuiltinI32
+        i32T = simpleType "i32"
         app =
           Surface.Type
             { ty =
@@ -134,7 +133,7 @@ spec = describe "Type parser (minimal subset)" do
             { ty =
                 Surface.TyTupleF
                   ( fromJust $
-                      NonEmptyVector.fromList [builtin Surface.BuiltinI32, builtin Surface.BuiltinString]
+                      NonEmptyVector.fromList [simpleType "i32", simpleType "string"]
                   )
             , ann = ()
             }
@@ -159,8 +158,8 @@ spec = describe "Type parser (minimal subset)" do
   it "parses fn type fn(i32) -> i32" do
     let t =
           fnType
-            [builtin Surface.BuiltinI32]
-            (Just (fnEffRes Nothing (builtin Surface.BuiltinI32)))
+            [simpleType "i32"]
+            (Just (fnEffRes Nothing (simpleType "i32")))
     testParser "fn(i32) -> i32" PType.pType $ shouldBeParsed (`shouldBe` t)
 
   it "parses fn with effect row fn(i32) -> @[IO] i32" do
@@ -168,19 +167,19 @@ spec = describe "Type parser (minimal subset)" do
         row = fnEffectRow [Surface.FnEffectAtomTypeF ioType] Nothing
         t =
           fnType
-            [builtin Surface.BuiltinI32]
-            (Just (fnEffRes (Just row) (builtin Surface.BuiltinI32)))
+            [simpleType "i32"]
+            (Just (fnEffRes (Just row) (simpleType "i32")))
     testParser "fn(i32) -> @[IO] i32" PType.pType $ shouldBeParsed (`shouldBe` t)
 
   it "parses short effect row fn(i32) -> @R i32" do
     let row = simpleType "R"
         t =
           fnType
-            [builtin Surface.BuiltinI32]
+            [simpleType "i32"]
             ( Just
                 ( fnEffRes
                     (Just (Surface.FnEffectsTypeF row))
-                    (builtin Surface.BuiltinI32)
+                    (simpleType "i32")
                 )
             )
     testParser "fn(i32) -> @R i32" PType.pType $ shouldBeParsed (`shouldBe` t)

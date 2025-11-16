@@ -32,22 +32,22 @@ type ModuleItem =
     Surface.Type
     Surface.Expression
 
-modIdent :: Text -> Surface.ModuleIdentifier ()
-modIdent name = Surface.ModuleIdentifier{name, ann = ()}
+modIdent :: Text -> Surface.Identifier ()
+modIdent name = Surface.Identifier{name, ann = ()}
 
-simpleVar :: Text -> Surface.SimpleVarIdentifier ()
-simpleVar name = Surface.SimpleVarIdentifier{name, ann = ()}
+simpleVar :: Text -> Surface.Identifier ()
+simpleVar name = Surface.Identifier{name, ann = ()}
 
 simpleType :: Text -> Surface.Type ()
 simpleType name =
   Surface.Type
     { ty =
         Surface.TyIdentifierF
-          Surface.AnyTypeIdentifier
+          Surface.QualifiedIdentifierF
             { qualifierPrefix = Nothing
             , qualifier = Nothing
             , typeQualifier = Nothing
-            , identifier = Surface.SimpleTypeIdentifier{name, ann = ()}
+            , identifier = Surface.Identifier{name, ann = ()}
             , ann = ()
             }
     , ann = ()
@@ -92,9 +92,9 @@ useClauseLeaf path =
       let
         buildTree [] = undefined
         buildTree [segment] =
-          Surface.UseTrLeafVar
+          Surface.UseTrLeafIdent
             Surface.UseTreeLeaf
-              { use = Surface.SimpleVarIdentifier segment ()
+              { use = Surface.Identifier{name = segment, ann = ()}
               , as = Nothing
               , ann = ()
               }
@@ -114,17 +114,17 @@ useClauseAs path alias =
     root : rest ->
       let
         build [] =
-          Surface.UseTrLeafVar
+          Surface.UseTrLeafIdent
             Surface.UseTreeLeaf
-              { use = Surface.SimpleVarIdentifier root ()
-              , as = Just $ Surface.SimpleVarIdentifier alias ()
+              { use = Surface.Identifier{name = root, ann = ()}
+              , as = Just $ Surface.Identifier{name = alias, ann = ()}
               , ann = ()
               }
         build [segment] =
-          Surface.UseTrLeafVar
+          Surface.UseTrLeafIdent
             Surface.UseTreeLeaf
-              { use = Surface.SimpleVarIdentifier segment ()
-              , as = Just $ Surface.SimpleVarIdentifier alias ()
+              { use = Surface.Identifier{name = segment, ann = ()}
+              , as = Just $ Surface.Identifier{name = alias, ann = ()}
               , ann = ()
               }
         build (segment : segments) = Surface.UseTrBranch (modIdent segment) (build segments)
@@ -142,7 +142,7 @@ structItem pub' name =
     , item =
         Surface.ModItemStructF
           Surface.StructF
-            { name = Surface.SimpleTypeIdentifier{name, ann = ()}
+            { name = Surface.Identifier{name, ann = ()}
             , typeParams = Nothing
             , whereBlock = Nothing
             , fields = Surface.FieldsDeclNamedF mempty
@@ -158,14 +158,24 @@ enumItem pub' name variants =
     , item =
         Surface.ModItemEnumF
           Surface.EnumF
-            { name = Surface.SimpleTypeIdentifier{name, ann = ()}
+            { name = Surface.Identifier{name, ann = ()}
             , typeParams = Nothing
             , whereBlock = Nothing
             , variants =
                 Surface.EVariantsSimpleF
                   ( case NE.fromList
                       ( fmap
-                          (\vname -> Surface.EnumVariantF{name = Surface.SimpleTypeIdentifier{name = vname, ann = ()}, fields = Nothing, ann = ()})
+                          ( \vname ->
+                              Surface.EnumVariantF
+                                { name =
+                                    Surface.Identifier
+                                      { name = vname
+                                      , ann = ()
+                                      }
+                                , fields = Nothing
+                                , ann = ()
+                                }
+                          )
                           variants
                       ) of
                       Nothing -> error "enumItem: expected non-empty variants"
@@ -183,7 +193,7 @@ typeAliasItem pub' name ty =
     , item =
         Surface.ModItemTypeAliasF
           Surface.TypeDefinitionF
-            { name = Surface.SimpleTypeIdentifier{name, ann = ()}
+            { name = Surface.Identifier{name, ann = ()}
             , typeParams =
                 Just $
                   Surface.BindersF
@@ -192,7 +202,7 @@ typeAliasItem pub' name ty =
                         Vector.fromList
                           [ Surface.BinderWoConstraintF
                               { name =
-                                  Surface.SimpleTypeIdentifier
+                                  Surface.Identifier
                                     { name = "X"
                                     , ann = ()
                                     }
@@ -202,7 +212,7 @@ typeAliasItem pub' name ty =
                               }
                           , Surface.BinderWoConstraintF
                               { name =
-                                  Surface.SimpleTypeIdentifier
+                                  Surface.Identifier
                                     { name = "Y"
                                     , ann = ()
                                     }
@@ -281,7 +291,7 @@ letItem pub' name ty expr =
                 Surface.PatternSimple
                   { patternSimple =
                       Surface.PatSimVarF
-                        ( Surface.PatternVariableF
+                        ( Surface.PatternVarF
                             { ref = Nothing
                             , mut = Nothing
                             , name = simpleVar name
@@ -340,24 +350,24 @@ spec = describe "Module parser (minimal subset)" do
     let nestedTree =
           Surface.UseTrNested
             ( Vector.fromList
-                [ Surface.UseTrLeafVar
+                [ Surface.UseTrLeafIdent
                     Surface.UseTreeLeaf
-                      { use = Surface.SimpleVarIdentifier "io" ()
+                      { use = Surface.Identifier{name = "io", ann = ()}
                       , as = Nothing
                       , ann = ()
                       }
                 , Surface.UseTrBranch
                     (modIdent "fs")
                     ( Surface.UseTrNested $
-                        Surface.UseTrLeafVar
+                        Surface.UseTrLeafIdent
                           <$> Vector.fromList
                             [ Surface.UseTreeLeaf
-                                { use = Surface.SimpleVarIdentifier "read" ()
+                                { use = Surface.Identifier{name = "read", ann = ()}
                                 , as = Nothing
                                 , ann = ()
                                 }
                             , Surface.UseTreeLeaf
-                                { use = Surface.SimpleVarIdentifier "write" ()
+                                { use = Surface.Identifier{name = "write", ann = ()}
                                 , as = Nothing
                                 , ann = ()
                                 }
@@ -399,11 +409,65 @@ spec = describe "Module parser (minimal subset)" do
           , fnItem
               nonPub
               "add"
-              [ (False, "a", Surface.Type{ty = Surface.TyBuiltinF Surface.BuiltinI32, ann = ()})
-              , (False, "b", Surface.Type{ty = Surface.TyBuiltinF Surface.BuiltinI32, ann = ()})
+              [
+                ( False
+                , "a"
+                , Surface.Type
+                    { ty =
+                        Surface.TyIdentifierF
+                          ( Surface.QualifiedIdentifierF
+                              { qualifierPrefix = Nothing
+                              , qualifier = Nothing
+                              , typeQualifier = Nothing
+                              , identifier = Surface.Identifier{name = "i32", ann = ()}
+                              , ann = ()
+                              }
+                          )
+                    , ann = ()
+                    }
+                )
+              ,
+                ( False
+                , "b"
+                , Surface.Type
+                    { ty =
+                        Surface.TyIdentifierF
+                          ( Surface.QualifiedIdentifierF
+                              { qualifierPrefix = Nothing
+                              , qualifier = Nothing
+                              , typeQualifier = Nothing
+                              , identifier = Surface.Identifier{name = "i32", ann = ()}
+                              , ann = ()
+                              }
+                          )
+                    , ann = ()
+                    }
+                )
               ]
               Nothing
-              (Just Surface.Type{ty = Surface.TyBuiltinF Surface.BuiltinI32, ann = ()})
-          , letItem nonPub "x" (Surface.Type{ty = Surface.TyBuiltinF Surface.BuiltinI32, ann = ()}) (literalInt 42)
+              ( Just
+                  Surface.Type
+                    { ty =
+                        Surface.TyIdentifierF
+                          ( Surface.QualifiedIdentifierF
+                              { qualifierPrefix = Nothing
+                              , qualifier = Nothing
+                              , typeQualifier = Nothing
+                              , identifier = Surface.Identifier{name = "i32", ann = ()}
+                              , ann = ()
+                              }
+                          )
+                    , ann = ()
+                    }
+              )
+          , letItem
+              nonPub
+              "x"
+              ( Surface.Type
+                  { ty = Surface.TyIdentifierF (Surface.QualifiedIdentifierF{qualifierPrefix = Nothing, qualifier = Nothing, typeQualifier = Nothing, identifier = Surface.Identifier{name = "i32", ann = ()}, ann = ()})
+                  , ann = ()
+                  }
+              )
+              (literalInt 42)
           ]
     testParser src pModDefinitionBody $ shouldBeParsed (`shouldBe` moduleBody items)

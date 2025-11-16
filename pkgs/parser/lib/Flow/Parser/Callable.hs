@@ -27,9 +27,9 @@ import Flow.AST.Surface.Syntax qualified as Surface
 import Flow.AST.Surface.Type qualified as Surface
 import Flow.Lexer (SourceSpan (..), WithPos (..))
 import Flow.Lexer qualified as Lexer
-import Flow.Parser.Common (HasAnn, Parser, pSimpleVarIdentifier, single)
+import Flow.Parser.Common (HasAnn, Parser, pIdentifier, single)
 import Flow.Parser.Constraint (
-  pAnyVarIdentifier,
+  pQualifiedIdentifier,
   pBindersWoConstraints,
   pWhereBlockHead,
  )
@@ -42,7 +42,7 @@ pRecieverHeader ::
   Parser (ReceiverHeaderF ty SourceSpan)
 pRecieverHeader pTy = do
   typeParams <- Megaparsec.optional (pBindersWoConstraints pTy)
-  name <- pSimpleVarIdentifier
+  name <- pIdentifier
   _ <- single (Lexer.Punctuation Lexer.Colon)
   type_ <- pTy
   pure
@@ -99,7 +99,7 @@ pCallableHeader pKind pReciever pName pTy = do
 
   pArg = do
     mut <- Megaparsec.optional (single (Lexer.Keyword Lexer.Mut))
-    name <- pSimpleVarIdentifier
+    name <- pIdentifier
     _ <- single (Lexer.Punctuation Lexer.Colon)
     type_ <- pTy
     pure $
@@ -149,7 +149,7 @@ pFnDeclaration =
   pCallable
     (void <$> single (Lexer.Keyword Lexer.Fn))
     (pure Surface.UnitF)
-    pSimpleVarIdentifier
+    pIdentifier
     pBodySemicolon
 
 pFnInfixDeclaration ::
@@ -160,7 +160,7 @@ pFnInfixDeclaration pTy =
   pCallable
     (void <$> single (Lexer.Keyword Lexer.Fn))
     (pRecieverHeader pTy)
-    pSimpleVarIdentifier
+    pIdentifier
     pBodySemicolon
     pTy
 
@@ -174,7 +174,7 @@ pFnDefinition pStmt pTy pExpr =
   pCallable
     (void <$> single (Lexer.Keyword Lexer.Fn))
     (pure Surface.UnitF)
-    pSimpleVarIdentifier
+    pIdentifier
     (pCodeBlock pStmt pExpr <&> \block -> (block, Just block.ann))
     pTy
 
@@ -188,7 +188,7 @@ pFnInfixDefinition pStmt pTy pExpr =
   pCallable
     (void <$> single (Lexer.Keyword Lexer.Fn))
     (pRecieverHeader pTy)
-    pSimpleVarIdentifier
+    pIdentifier
     (pCodeBlock pStmt pExpr <&> \block -> (block, Just block.ann))
     pTy
 
@@ -200,7 +200,7 @@ pOpDeclaration =
   pCallable
     (void <$> single (Lexer.Keyword Lexer.Op))
     (pure Surface.UnitF)
-    pSimpleVarIdentifier
+    pIdentifier
     pBodySemicolon
 
 pOpInfixDeclaration ::
@@ -211,7 +211,7 @@ pOpInfixDeclaration pTy =
   pCallable
     (void <$> single (Lexer.Keyword Lexer.Op))
     (pRecieverHeader pTy)
-    pSimpleVarIdentifier
+    pIdentifier
     pBodySemicolon
     pTy
 
@@ -225,7 +225,7 @@ pOpDefinition pStmt pTy pExpr =
   pCallable
     (void <$> single (Lexer.Keyword Lexer.Op))
     (pure Surface.UnitF)
-    (pAnyVarIdentifier pTy)
+    (pQualifiedIdentifier pTy)
     (pCodeBlock pStmt pExpr <&> \block -> (block, Just block.ann))
     pTy
 
@@ -239,7 +239,7 @@ pOpInfixDefinition pStmt pTy pExpr =
   pCallable
     (void <$> single (Lexer.Keyword Lexer.Op))
     (pRecieverHeader pTy)
-    (pAnyVarIdentifier pTy)
+    (pQualifiedIdentifier pTy)
     (pCodeBlock pStmt pExpr <&> \block -> (block, Just block.ann))
     pTy
 

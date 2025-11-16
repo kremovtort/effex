@@ -5,8 +5,8 @@ import "nonempty-vector" Data.Vector.NonEmpty (NonEmptyVector)
 import "tree-diff" Data.TreeDiff.Class (ToExpr)
 import "base" Prelude hiding (Enum)
 
-import Flow.AST.Surface.Common (SimpleVarIdentifier)
-import Flow.AST.Surface.Constraint (AnyTypeIdentifier, BindersWoConstraintsF)
+import Flow.AST.Surface.Common (Identifier)
+import Flow.AST.Surface.Constraint (QualifiedIdentifierF, BindersWoConstraintsF)
 import Flow.AST.Surface.Literal (Literal)
 
 data PatternF pat ty ann
@@ -17,25 +17,27 @@ data PatternF pat ty ann
 
 data PatternSimpleF pat ty ann
   = PatSimWildcardF
-  | PatSimVarF (PatternVariableF pat ty ann)
+  | PatSimVarF (PatternVarF ann)
   | PatSimTupleF (NonEmptyVector (pat ann))
   | PatSimConstructorAppF (PatternConsturctorAppF pat ty ann)
+  | PatSimConstructorF (QualifiedIdentifierF ty ann)
   | PatSimOfTypeF (pat ann) (ty ann)
-  | PatSimAsF (pat ann) (PatternVariableF pat ty ann)
+  | PatSimAsF (pat ann) (PatternVarF ann)
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
-data PatternVariableF pat ty ann = PatternVariableF
+data PatternVarF ann = PatternVarF
   { ref :: Maybe ann
   , mut :: Maybe ann
-  , name :: SimpleVarIdentifier ann
+  , name :: Identifier ann
   , ann :: ann
   }
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data PatternConsturctorAppF pat ty ann = PatternConsturctorAppF
-  { name :: AnyTypeIdentifier ty ann
+  { name :: QualifiedIdentifierF ty ann
   , typeParams :: Maybe (BindersWoConstraintsF ty ann)
-  , fields :: Maybe (PatternFieldsF pat ty ann, ann)
+  , fields :: PatternFieldsF pat ty ann
+  , fieldsAnn :: ann
   , ann :: ann
   }
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
@@ -58,7 +60,7 @@ data PatternFieldNamedF pat ty ann
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data PatternFieldNamedValueF pat ty ann = PatternFieldNamedValueF
-  { name :: SimpleVarIdentifier ann
+  { name :: Identifier ann
   , value :: pat ann
   , ann :: ann
   }
@@ -67,7 +69,7 @@ data PatternFieldNamedValueF pat ty ann = PatternFieldNamedValueF
 data PatternFieldNamedPunningF pat ty ann = PatternFieldNamedPunningF
   { ref :: Maybe ann
   , mut :: Maybe ann
-  , name :: SimpleVarIdentifier ann
+  , name :: Identifier ann
   , optional :: Maybe ann
   , ann :: ann
   }
