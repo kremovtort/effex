@@ -33,19 +33,14 @@ library
   exposed-modules:
     Flow.Lexer
     Flow.Parser
-    Flow.Parser.Callable
     Flow.Parser.Common
-    Flow.Parser.Constraint
-    Flow.Parser.Decl
-    Flow.Parser.Expr
+    Flow.Parser.Core
+    Flow.Parser.Data
     Flow.Parser.Literal
-    Flow.Parser.Module
-    Flow.Parser.Operators
+    Flow.Parser.Mod
     Flow.Parser.Pattern
-    Flow.Parser.Syntax
     Flow.Parser.Type
     Flow.Parser.Use
-    Flow.Parser.With
 
   build-depends:
     base ^>=4.21.0.0,

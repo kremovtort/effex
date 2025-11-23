@@ -10,6 +10,7 @@ module Flow.Parser.Common (
   single,
   token,
   many1,
+  sepBy1,
   sepEndBy1,
   pIdentifier,
   pNonQualifiedIdentifier,
@@ -63,6 +64,9 @@ many1 p = do
   first <- p
   rest <- Megaparsec.many p
   pure $ first :| rest
+
+sepBy1 :: Parser a -> Parser sep -> Parser (List.NonEmpty a)
+sepBy1 p sep = List.NonEmpty.fromList <$> Megaparsec.sepBy1 p sep
 
 sepEndBy1 :: Parser a -> Parser sep -> Parser (List.NonEmpty a)
 sepEndBy1 p sep = List.NonEmpty.fromList <$> Megaparsec.sepEndBy1 p sep

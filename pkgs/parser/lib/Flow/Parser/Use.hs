@@ -4,18 +4,18 @@
 module Flow.Parser.Use where
 
 import "megaparsec" Text.Megaparsec qualified as Megaparsec
+import "nonempty-vector" Data.Vector.NonEmpty qualified as NonEmptyVector
 import "vector" Data.Vector qualified as Vector
 
-import Data.Maybe (fromJust)
-import Data.Vector.NonEmpty qualified as NonEmptyVector
 import Flow.AST.Ann
 import Flow.AST.Surface.Common qualified as Surface
 import Flow.AST.Surface.Use qualified as Surface
 import Flow.Lexer qualified as Lexer
 import Flow.Parser.Common (
   Parser,
-  pMethodIdentifier,
   pIdentifier,
+  pMethodIdentifier,
+  sepBy1,
   single,
  )
 
@@ -36,10 +36,10 @@ pUseClause = do
   pUseRoot = do
     Megaparsec.choice
       [ Surface.UsClSelf . (.span) <$> single (Lexer.Keyword Lexer.Self)
-      , Surface.UsClSupers . fromJust . NonEmptyVector.fromList . fmap (.span)
-          <$> Megaparsec.sepEndBy1
+      , Surface.UsClSupers . NonEmptyVector.fromNonEmpty . fmap (.span)
+          <$> sepBy1
             (single (Lexer.Keyword Lexer.Super))
-            (single (Lexer.Punctuation Lexer.Comma))
+            (single (Lexer.Punctuation Lexer.ColonColon))
       , Surface.UsClPackage <$> pIdentifier
       ]
 
@@ -52,6 +52,7 @@ pUseClause = do
       , Megaparsec.try pUseTreeLeafIdent
       , Megaparsec.try pUseTreeLeafWildcard
       ]
+
   pUseTreeBranch = do
     ident <- pIdentifier
     _ <- single (Lexer.Punctuation Lexer.ColonColon)

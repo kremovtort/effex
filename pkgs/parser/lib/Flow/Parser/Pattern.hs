@@ -1,58 +1,60 @@
 module Flow.Parser.Pattern where
 
+import "base" Data.Bifunctor qualified as Bifunctor
 import "base" Data.Functor ((<&>))
-import "base" Data.Maybe (fromJust)
 import "megaparsec" Text.Megaparsec qualified as Megaparsec
 import "nonempty-vector" Data.Vector.NonEmpty qualified as NonEmptyVector
 
-import Data.Bifunctor qualified as Bifunctor
 import Flow.AST.Surface.Common qualified as Surface
-import Flow.AST.Surface.Constraint qualified as Surface
 import Flow.AST.Surface.Pattern qualified as Surface
+import Flow.AST.Surface.Type qualified as Surface
 import Flow.Lexer qualified as Lexer
-import Flow.Parser.Common (HasAnn, Parser, SourceSpan (..), pIdentifier, single)
-import Flow.Parser.Constraint (pQualifiedIdentifier, pBindersWoConstraints)
+import Flow.Parser.Common (HasAnn, Parser, SourceSpan (..), pIdentifier, sepEndBy1, single)
 import Flow.Parser.Literal (literal)
+import Flow.Parser.Type (pBindersWoConstraints, pQualifiedIdentifier)
 
-pPattern ::
-  forall pat ty.
-  (HasAnn pat SourceSpan, HasAnn ty SourceSpan) =>
-  Parser (pat SourceSpan) ->
-  Parser (ty SourceSpan) ->
-  Parser (Surface.PatternF pat ty SourceSpan, SourceSpan)
-pPattern pPat pTy = Megaparsec.label "pattern" do
+pPattern :: Parser (Surface.Pattern SourceSpan)
+pPattern = Megaparsec.label "pattern" do
   Megaparsec.choice
-    [ Bifunctor.first Surface.PatSimpleF <$> pPatternSimple pPat pTy
+    [ pPatternSimpleF pPattern <&> \patSim ->
+        Surface.Pattern{pat = Surface.PatSimpleF $ fst patSim, ann = snd patSim}
     , pLiteral
-    , pOr pPat pTy
+    , pOr
     ]
 
-pPatternSimple ::
-  forall pat ty.
-  (HasAnn pat SourceSpan, HasAnn ty SourceSpan) =>
+pPatternSimple :: Parser (Surface.PatternSimple SourceSpan)
+pPatternSimple =
+  pPatternSimpleF pPatternSimple <&> \patSim ->
+    Surface.PatternSimple
+      { pat = fst patSim
+      , ann = snd patSim
+      }
+
+pPatternSimpleF ::
+  forall pat.
+  (HasAnn pat SourceSpan) =>
   Parser (pat SourceSpan) ->
-  Parser (ty SourceSpan) ->
-  Parser (Surface.PatternSimpleF pat ty SourceSpan, SourceSpan)
-pPatternSimple pPat pTy =
+  Parser (Surface.PatternSimpleF pat SourceSpan, SourceSpan)
+pPatternSimpleF pPat =
   Megaparsec.choice
     [ pWildcard
     , pTuple pPat
-    , Megaparsec.try (pConsApp pPat pTy) <&> \cons ->
+    , Megaparsec.try (pConsApp pPat) <&> \cons ->
         (Surface.PatSimConstructorAppF cons, cons.ann)
     , Megaparsec.try pVar <&> \var -> (Surface.PatSimVarF var, var.ann)
-    , Megaparsec.try (pQualifiedIdentifier pTy) <&> \cons ->
+    , Megaparsec.try pQualifiedIdentifier <&> \cons ->
         (Surface.PatSimConstructorF cons, cons.ann)
     ]
 
-pWildcard :: Parser (Surface.PatternSimpleF pat ty SourceSpan, SourceSpan)
+pWildcard :: Parser (Surface.PatternSimpleF pat SourceSpan, SourceSpan)
 pWildcard = do
   tok <- single (Lexer.Identifier "_")
   pure (Surface.PatSimWildcardF, tok.span)
 
-pLiteral :: Parser (Surface.PatternF pat ty SourceSpan, SourceSpan)
+pLiteral :: Parser (Surface.Pattern SourceSpan)
 pLiteral = do
   (lit, ann) <- literal
-  pure (Surface.PatLiteralF lit, ann)
+  pure Surface.Pattern{pat = Surface.PatLiteralF lit, ann}
 
 pVar :: Parser (Surface.PatternVarF SourceSpan)
 pVar = Megaparsec.label "pattern variable" do
@@ -75,26 +77,26 @@ pVar = Megaparsec.label "pattern variable" do
       }
 
 pTuple ::
+  (HasAnn pat SourceSpan) =>
   Parser (pat SourceSpan) ->
-  Parser (Surface.PatternSimpleF pat ty SourceSpan, SourceSpan)
+  Parser (Surface.PatternSimpleF pat SourceSpan, SourceSpan)
 pTuple p = do
   tokS <- single (Lexer.Punctuation Lexer.LeftParen)
-  items <- Megaparsec.sepEndBy1 p (single (Lexer.Punctuation Lexer.Comma))
+  items <- sepEndBy1 p (single (Lexer.Punctuation Lexer.Comma))
   tokE <- single (Lexer.Punctuation Lexer.RightParen)
   pure
-    ( Surface.PatSimTupleF (fromJust $ NonEmptyVector.fromList items)
+    ( Surface.PatSimTupleF (NonEmptyVector.fromNonEmpty items)
     , SourceSpan{start = tokS.span.start, end = tokE.span.end}
     )
 
 pConsApp ::
-  forall pat ty.
-  (HasAnn pat SourceSpan, HasAnn ty SourceSpan) =>
+  forall pat.
+  (HasAnn pat SourceSpan) =>
   Parser (pat SourceSpan) ->
-  Parser (ty SourceSpan) ->
-  Parser (Surface.PatternConsturctorAppF pat ty SourceSpan)
-pConsApp pPat pTy = do
-  consName <- pQualifiedIdentifier pTy
-  typeParams <- Megaparsec.optional (pBindersWoConstraints pTy)
+  Parser (Surface.PatternConsturctorAppF pat SourceSpan)
+pConsApp pPat = do
+  consName <- pQualifiedIdentifier
+  typeParams <- Megaparsec.optional pBindersWoConstraints
   (fields, fieldsAnn) <- pFields
   pure
     Surface.PatternConsturctorAppF
@@ -113,10 +115,10 @@ pConsApp pPat pTy = do
 
   pFieldsUnnamed = do
     tokS <- single (Lexer.Punctuation Lexer.LeftParen)
-    fields <- Megaparsec.sepEndBy1 pFieldUnnamed (single (Lexer.Punctuation Lexer.Comma))
+    fields <- sepEndBy1 pFieldUnnamed (single (Lexer.Punctuation Lexer.Comma))
     tokE <- single (Lexer.Punctuation Lexer.RightParen)
     pure
-      ( fromJust $ NonEmptyVector.fromList fields
+      ( NonEmptyVector.fromNonEmpty fields
       , SourceSpan{start = tokS.span.start, end = tokE.span.end}
       )
 
@@ -138,24 +140,24 @@ pConsApp pPat pTy = do
 
   pFieldsNamed = do
     tokS <- single (Lexer.Punctuation Lexer.LeftBrace)
-    fields <- Megaparsec.sepEndBy1 pFieldNamed (single (Lexer.Punctuation Lexer.Comma))
+    fields <- sepEndBy1 pFieldNamed (single (Lexer.Punctuation Lexer.Comma))
     tokE <- single (Lexer.Punctuation Lexer.RightBrace)
     pure
-      ( fromJust $ NonEmptyVector.fromList fields
+      ( NonEmptyVector.fromNonEmpty fields
       , SourceSpan
           { start = tokS.span.start
           , end = tokE.span.end
           }
       )
 
-  pFieldNamed :: Parser (Surface.PatternFieldNamedF pat ty SourceSpan)
+  pFieldNamed :: Parser (Surface.PatternFieldNamedF pat SourceSpan)
   pFieldNamed =
     Megaparsec.choice
       [ Surface.PatFldNmdValueF <$> Megaparsec.try pFieldNamedValue
       , Surface.PatFldNmdPunningF <$> pFieldNamedPunning
       ]
 
-  pFieldNamedValue :: Parser (Surface.PatternFieldNamedValueF pat ty SourceSpan)
+  pFieldNamedValue :: Parser (Surface.PatternFieldNamedValueF pat SourceSpan)
   pFieldNamedValue = do
     name <- pIdentifier
     _ <- single (Lexer.Punctuation Lexer.Assign)
@@ -167,7 +169,7 @@ pConsApp pPat pTy = do
         , ann = SourceSpan{start = name.ann.start, end = value.ann.end}
         }
 
-  pFieldNamedPunning :: Parser (Surface.PatternFieldNamedPunningF pat ty SourceSpan)
+  pFieldNamedPunning :: Parser (Surface.PatternFieldNamedPunningF pat SourceSpan)
   pFieldNamedPunning = do
     ref <- Megaparsec.optional (single (Lexer.Keyword Lexer.Ref))
     mut <- Megaparsec.optional (single (Lexer.Keyword Lexer.Mut))
@@ -188,17 +190,19 @@ pConsApp pPat pTy = do
               }
         }
 
-pOr ::
-  (HasAnn pat SourceSpan, HasAnn ty SourceSpan) =>
-  Parser (pat SourceSpan) ->
-  Parser (ty SourceSpan) ->
-  Parser (Surface.PatternF pat ty SourceSpan, SourceSpan)
-pOr pPat pTy = do
-  items <- fromJust . NonEmptyVector.fromList <$> Megaparsec.sepEndBy1 (pPatternSimple pPat pTy) (single (Lexer.Punctuation Lexer.Pipe))
+pOr :: Parser (Surface.Pattern SourceSpan)
+pOr = do
+  items <-
+    NonEmptyVector.fromNonEmpty
+      <$> sepEndBy1
+        (pPatternSimpleF pPattern)
+        (single (Lexer.Punctuation Lexer.Pipe))
   pure
-    ( Surface.PatOrF (fmap fst items)
-    , SourceSpan
-        { start = (snd $ NonEmptyVector.head items).start
-        , end = (snd $ NonEmptyVector.last items).end
-        }
-    )
+    Surface.Pattern
+      { pat = Surface.PatOrF (fmap fst items)
+      , ann =
+          SourceSpan
+            { start = (snd $ NonEmptyVector.head items).start
+            , end = (snd $ NonEmptyVector.last items).end
+            }
+      }
