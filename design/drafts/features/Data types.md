@@ -14,16 +14,16 @@ struct Pair<A, B> {
 ```
 ## GADT
 ```rust
-enum Type_<A> {
-  Char: Type_<char>,
-  Int: Type_<i64>,
-  <X> List(Type_<X>): Type_<List<X>>
+enum Expr<A> {
+  Bool(bool): Expr<bool>,
+  Int(i64): Expr<i64>,
+  <X> List(Vec<Expr<X>>): Expr<Vec<X>>
 }
 ```
 ## Кортежи
 ```rust
-let x: (boolean, i32, string) = (false, 2 : i32, "my string");
-println!("({}, {}, {})", x._1, x._2, x._3);
+let x: (boolean, i32, string) = (false, 2: i32, "my string");
+println!("({}, {}, {})", x.1, x.2, x.3);
 ```
 
 # Модификаторы мутабельности
@@ -34,9 +34,9 @@ struct Pair<A, B> {
   second: B,
 }
 
-let x = Pair { first = true, second = 2 : i32 };
+let x = Pair { first = true, second = 2: i32 };
 x.first = false; // ошибка, т.к. x иммутабельно, то и его поля невозможно изменить
-let mut x = Pair { first = true, second = 2 : i32 };
+let mut x = Pair { first = true, second = 2: i32 };
 x.first = false; // ошибки нет
 
 struct ImutPair<A, B> {
@@ -44,13 +44,13 @@ struct ImutPair<A, B> {
   second: const B,
 }
 
-let mut x = ImutPair { first = true, second = 2 : i32 };
+let mut x = ImutPair { first = true, second = 2: i32 };
 x.first = false; // ошибка компиляции, поле first иммутабельно
 ```
 
 Типы могут быть параметризованы скоупами:
 ```rust
-struct Pair<'s, A, B> {
+struct RefPair<'s, A, B> {
   first: &'s A,
   second: &'s B,
 }

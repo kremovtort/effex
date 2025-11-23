@@ -52,22 +52,22 @@
 Для блока кода есть синтаксис with:
 ```rust
 with {
-  let Reader<R> = reader_handle(env); // ввод нового эффекта происходит через let
-  let state: State<S> = state_handle(initial); // так же можно задать label для нового интерпретированного эффекта, тип эффекта задаётся через : и может быть опущен, в таком случае он будет выведен из типа выражения справа от =
+  let! _: Reader<R> <- reader_handle(env); // ввод нового эффекта происходит через let
+  let! state: State<S> <- state_handle(initial); // так же можно задать label для нового интерпретированного эффекта, тип эффекта задаётся через : и может быть опущен, в таком случае он будет выведен из типа выражения справа от =
 
   // Ниже синтаксис для замены эффектов для всех вызовов ниже по стеку
-  Reader<R> = reader_handle(env);
-  state = state_handle(initial);
+  _: Reader<R> <- reader_handle(env);
+  state <- state_handle(initial);
 
   // так же в этом блоке возможно задать новое имя для эффекта, важно, что хоть оно и происходит через let, но это не ввод нового эффекта, а лишь добавление нового имени для эффекта, которое будет доступно в текущем блоке кода
-  let reader = Reader<R>;
-  let state1 = state;
+  let! reader = Reader<R>;
+  let! state1 = state;
 
   // так же возможно интерпретировать сразу несколько эффектов, для этого эффекты перечисляются через запятую, а справа от = должен быть handle интерпретирующий соответствующие эффекты
-  let Reader<R>, State<S> = reader_state_handle(env, initial);
-  let reader, state2 = reader_state_handle(env, initial);
-  let reader1: Reader<R>, state2: State<S> = reader_state_handle(env, initial);
-  reader1, state2 = reader_state_handle(env, initial); // замена нескольких эффектов одновременно одним handle'ом
+  let! Reader<R>, State<S> <- reader_state_handle(env, initial);
+  let! reader, state2 <- reader_state_handle(env, initial);
+  let! reader1: Reader<R>, state2: State<S> <- reader_state_handle(env, initial);
+  reader1, state2 <- reader_state_handle(env, initial); // замена нескольких эффектов одновременно одним handle'ом
 } in {
   // ...
 }
@@ -79,14 +79,14 @@ f() with {
   // интерпретация эффекта Reader<R> для функции f()
   // вводит новый эффект Reader<R>, который будет доступен в функции f()
   // reader_handle(env) - это функция, возвращает хендлер для эффекта Reader<R>
-  Reader<R> = reader_handle(env),
+  _: Reader<R> <- reader_handle(env),
 
   // то же самое, но для labelled эффекта state в f()
-  state = state_handle(initial),
+  state <- state_handle(initial),
 
   // или можно передать уже интерпретированные эффекты доступные в лексическом контексте
-  Reader<R> = r, // r - это label эффекта Reader<R> в текущем лексическом контексте
-  state = State<S>, // State<S> служит для указание на эффект State<S> в текущем лексическом контексте
+  _: Reader<R> = r, // r - это label эффекта Reader<R> в текущем лексическом контексте
+  state = _: State<S>, // State<S> служит для указание на эффект State<S> в текущем лексическом контексте
 };
 
 // Кроме этого эффекты могут быть заданы в виде "кортежа", тогда для определения эффекта, который должен быть связан будет использоваться порядок эффектов в типе функции
@@ -113,7 +113,7 @@ with {
 
 ```rust
 // мультихендлер для эффектов State и Writer
-handle State<S>, Writer<W> in @['r] returning <Y> (Y, S, W) {
+handle State<S>, Writer<W> in mut 'r returning <Y> (Y, S, W) {
   let mut state = 0;
   let mut writer = Monoid::empty();
 
