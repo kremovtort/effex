@@ -303,7 +303,7 @@ spec = describe "Expression parser (minimal subset)" do
           """
     testParser source pExpression $ shouldBeParsed $ const $ pure ()
 
-  it "parses call with type/region params f<'s, T>(a)" do
+  it "parses call with type/region params f::<'s, T>(a)" do
     let expected = callWithParams "f" [regionIdent "s", typeVar "T"] [ident "a"]
     testParser "f::<'s, T>(a)" pExpression $ shouldBeParsed (`shouldBe` expected)
 

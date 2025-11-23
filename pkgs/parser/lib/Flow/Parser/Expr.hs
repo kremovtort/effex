@@ -19,8 +19,8 @@ import Flow.AST.Surface (
 import Flow.AST.Surface.Callable qualified as Surface
 import Flow.AST.Surface.Common (Identifier (..))
 import Flow.AST.Surface.Constraint (
-  QualifiedIdentifierF (..),
   BindersF (..),
+  QualifiedIdentifierF (..),
  )
 import Flow.AST.Surface.Expr (
   AllocF (..),
@@ -51,14 +51,14 @@ import Flow.Parser.Common (
   Parser,
   SourceSpan (..),
   WithPos (..),
-  pRegionIdentifier,
   pIdentifier,
+  pRegionIdentifier,
   single,
  )
 import Flow.Parser.Constraint (
-  pQualifiedIdentifier,
   pBindersAppValueLevel,
   pBindersWoConstraints,
+  pQualifiedIdentifier,
   pWhereBlockHead,
  )
 import Flow.Parser.Literal (literal)
@@ -422,11 +422,19 @@ pExpression pStmt pSimPat pPat pTy pExpr = do
           pWithSuffix head'
       ]
 
-  pWithSuffix expr = do
-    expr' <- Megaparsec.optional $ pSuffix expr
-    case expr' of
-      Nothing -> pure expr
-      Just expr'' -> pWithSuffix expr''
+  pWithSuffix expr =
+    Megaparsec.choice
+      [ do
+          expr' <- Megaparsec.optional $ pContinousSuffix expr
+          case expr' of
+            Nothing -> pure expr
+            Just expr'' -> pWithSuffix expr''
+      , do
+          expr' <- Megaparsec.optional $ pOfTypeSuffix' expr
+          case expr' of
+            Nothing -> pure expr
+            Just expr'' -> pure expr''
+      ]
 
   pSuffixable =
     Megaparsec.choice
@@ -440,11 +448,10 @@ pExpression pStmt pSimPat pPat pTy pExpr = do
       , pAlloc'
       ]
 
-  pSuffix expr =
+  pContinousSuffix expr =
     Megaparsec.label "expression suffix" $
       Megaparsec.choice
-        [ pOfTypeSuffix' expr
-        , pIndexSuffix' expr
+        [ pIndexSuffix' expr
         , pDotAccessSuffix' expr
         , Megaparsec.try $ pAppSuffix' expr
         ]
