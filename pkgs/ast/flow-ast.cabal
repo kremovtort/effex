@@ -31,20 +31,15 @@ library
   exposed-modules:
     Flow.AST
     Flow.AST.Ann
-    Flow.AST.Surface
-    Flow.AST.Surface.All
-    Flow.AST.Surface.Callable
     Flow.AST.Surface.Common
-    Flow.AST.Surface.Constraint
-    Flow.AST.Surface.Decl
-    Flow.AST.Surface.Expr
+    Flow.AST.Surface.Core
+    Flow.AST.Surface.Data
     Flow.AST.Surface.Literal
-    Flow.AST.Surface.Module
+    Flow.AST.Surface.Mod
+    Flow.AST.Surface.Operators
     Flow.AST.Surface.Pattern
-    Flow.AST.Surface.Syntax
     Flow.AST.Surface.Type
     Flow.AST.Surface.Use
-    Flow.AST.Surface.With
 
   build-depends:
     base ^>=4.21.0.0,

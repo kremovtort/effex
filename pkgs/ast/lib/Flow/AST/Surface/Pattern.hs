@@ -3,25 +3,36 @@ module Flow.AST.Surface.Pattern where
 import "base" GHC.Generics (Generic)
 import "nonempty-vector" Data.Vector.NonEmpty (NonEmptyVector)
 import "tree-diff" Data.TreeDiff.Class (ToExpr)
-import "base" Prelude hiding (Enum)
 
 import Flow.AST.Surface.Common (Identifier)
-import Flow.AST.Surface.Constraint (BindersWoConstraintsF, QualifiedIdentifierF)
 import Flow.AST.Surface.Literal (Literal)
+import Flow.AST.Surface.Type (BindersWoConstraintsF, QualifiedIdentifierF, Type)
 
-data PatternF pat ty ann
-  = PatSimpleF (PatternSimpleF pat ty ann)
-  | PatLiteralF Literal
-  | PatOrF (NonEmptyVector (PatternSimpleF pat ty ann))
+data Pattern ann = Pattern
+  { pat :: PatternF ann
+  , ann :: ann
+  }
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
-data PatternSimpleF pat ty ann
+data PatternSimple ann = PatternSimple
+  { pat :: PatternSimpleF PatternSimple ann
+  , ann :: ann
+  }
+  deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
+
+data PatternF ann
+  = PatSimpleF (PatternSimpleF Pattern ann)
+  | PatLiteralF Literal
+  | PatOrF (NonEmptyVector (PatternSimpleF Pattern ann))
+  deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
+
+data PatternSimpleF pat ann
   = PatSimWildcardF
   | PatSimVarF (PatternVarF ann)
   | PatSimTupleF (NonEmptyVector (pat ann))
-  | PatSimConstructorAppF (PatternConsturctorAppF pat ty ann)
-  | PatSimConstructorF (QualifiedIdentifierF ty ann)
-  | PatSimOfTypeF (pat ann) (ty ann)
+  | PatSimConstructorAppF (PatternConsturctorAppF pat ann)
+  | PatSimConstructorF (QualifiedIdentifierF ann)
+  | PatSimOfTypeF (pat ann) (Type ann)
   | PatSimAsF (pat ann) (PatternVarF ann)
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
@@ -33,40 +44,40 @@ data PatternVarF ann = PatternVarF
   }
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
-data PatternConsturctorAppF pat ty ann = PatternConsturctorAppF
-  { name :: QualifiedIdentifierF ty ann
-  , typeParams :: Maybe (BindersWoConstraintsF ty ann)
-  , fields :: PatternFieldsF pat ty ann
+data PatternConsturctorAppF pat ann = PatternConsturctorAppF
+  { name :: QualifiedIdentifierF ann
+  , typeParams :: Maybe (BindersWoConstraintsF ann)
+  , fields :: PatternFieldsF pat ann
   , fieldsAnn :: ann
   , ann :: ann
   }
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
-data PatternFieldsF pat ty ann
-  = PatFldsUnnamedF (NonEmptyVector (PatternFieldUnnamedF pat ty ann))
-  | PatFldsNamedF (NonEmptyVector (PatternFieldNamedF pat ty ann))
+data PatternFieldsF pat ann
+  = PatFldsUnnamedF (NonEmptyVector (PatternFieldUnnamedF pat ann))
+  | PatFldsNamedF (NonEmptyVector (PatternFieldNamedF pat ann))
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
-data PatternFieldUnnamedF pat ty ann = PatternFieldUnnamedF
+data PatternFieldUnnamedF pat ann = PatternFieldUnnamedF
   { value :: pat ann
   , optional :: Maybe ann
   , ann :: ann
   }
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
-data PatternFieldNamedF pat ty ann
-  = PatFldNmdValueF (PatternFieldNamedValueF pat ty ann)
-  | PatFldNmdPunningF (PatternFieldNamedPunningF pat ty ann)
+data PatternFieldNamedF pat ann
+  = PatFldNmdValueF (PatternFieldNamedValueF pat ann)
+  | PatFldNmdPunningF (PatternFieldNamedPunningF pat ann)
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
-data PatternFieldNamedValueF pat ty ann = PatternFieldNamedValueF
+data PatternFieldNamedValueF pat ann = PatternFieldNamedValueF
   { name :: Identifier ann
   , value :: pat ann
   , ann :: ann
   }
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
-data PatternFieldNamedPunningF pat ty ann = PatternFieldNamedPunningF
+data PatternFieldNamedPunningF pat ann = PatternFieldNamedPunningF
   { ref :: Maybe ann
   , mut :: Maybe ann
   , name :: Identifier ann
