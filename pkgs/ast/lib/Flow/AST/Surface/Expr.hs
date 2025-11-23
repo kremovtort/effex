@@ -11,13 +11,14 @@ import Flow.AST.Surface.Callable (
   OpInfixDefinitionF,
  )
 import Flow.AST.Surface.Common (
-  RegionIdentifier,
   Identifier,
+  RegionIdentifier,
  )
 import Flow.AST.Surface.Constraint (
   BindersAppF,
   BindersWoConstraintsF,
-  WhereBlockF, QualifiedIdentifierF,
+  QualifiedIdentifierF,
+  WhereBlockF,
  )
 import Flow.AST.Surface.Literal (Literal)
 import Flow.AST.Surface.Syntax (
@@ -29,7 +30,7 @@ import Flow.AST.Surface.Syntax (
  )
 import Flow.AST.Surface.Type (FnEffectsResultF)
 import Flow.AST.Surface.Use (UseClause)
-import Flow.AST.Surface.With (WithBlockF, WithAppF)
+import Flow.AST.Surface.With (WithAppF, WithBlockF)
 
 -- Expressions
 
@@ -51,7 +52,7 @@ data ExpressionF stmt simPat pat ty expr ann
   | EBlockF (CodeBlockF stmt expr ann) -- { ... }
   | EAllocF (AllocF stmt expr ann) -- alloc 'into { ... }
   | EHandleF (HandleExpressionF stmt simPat ty expr ann) -- handle Effect
-  | ELambdaF (LambdaF stmt ty expr ann) -- <A>|a: T, b: T| -> T where { Monoid<T> } { a ++ B }
+  | ELambdaF (LambdaF stmt ty expr ann) -- <A>|a: T, b: T| -> T where Monoid<T> { a ++ B }
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 -- Pieces used by both Expr and Stmt

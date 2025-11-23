@@ -32,6 +32,7 @@ library
     Flow.AST
     Flow.AST.Ann
     Flow.AST.Surface
+    Flow.AST.Surface.All
     Flow.AST.Surface.Callable
     Flow.AST.Surface.Common
     Flow.AST.Surface.Constraint

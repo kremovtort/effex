@@ -1,6 +1,6 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Flow.AST.Surface.Common where
 
@@ -9,6 +9,9 @@ import "nonempty-vector" Data.Vector.NonEmpty (NonEmptyVector)
 import "nonempty-vector" Data.Vector.NonEmpty qualified as NonEmptyVector
 import "text" Data.Text (Text)
 import "tree-diff" Data.TreeDiff.Class (ToExpr (toExpr))
+
+data UnitF a = UnitF
+  deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic, ToExpr)
 
 data Identifier ann = Identifier
   { name :: Text

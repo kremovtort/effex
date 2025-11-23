@@ -8,7 +8,7 @@ import "vector" Data.Vector (Vector)
 import "base" Prelude hiding (Enum)
 
 import Data.Vector.NonEmpty (NonEmptyVector)
-import Flow.AST.Surface.Common (RegionIdentifier, Identifier)
+import Flow.AST.Surface.Common (Identifier, RegionIdentifier)
 
 data QualifiedIdentifierF ty ann = QualifiedIdentifierF
   { qualifierPrefix :: Maybe (QualifierPrefixF ann)

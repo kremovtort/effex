@@ -6,7 +6,7 @@ import "tree-diff" Data.TreeDiff.Class (ToExpr)
 import "base" Prelude hiding (Enum)
 
 import Flow.AST.Surface.Common (Identifier)
-import Flow.AST.Surface.Constraint (QualifiedIdentifierF, BindersWoConstraintsF)
+import Flow.AST.Surface.Constraint (BindersWoConstraintsF, QualifiedIdentifierF)
 import Flow.AST.Surface.Literal (Literal)
 
 data PatternF pat ty ann
