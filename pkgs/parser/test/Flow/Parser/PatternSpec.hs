@@ -9,22 +9,14 @@ import "nonempty-vector" Data.Vector.NonEmpty qualified as NE
 import "text" Data.Text (Text)
 import "vector" Data.Vector qualified as Vector
 
-import Flow.AST.Surface qualified as Surface
 import Flow.AST.Surface.Common qualified as Surface
-import Flow.AST.Surface.Constraint qualified as Surface
 import Flow.AST.Surface.Literal qualified as Surface
 import Flow.AST.Surface.Pattern qualified as Surface
-import Flow.Lexer qualified as Lexer
-import Flow.Parser (pPattern)
-import Flow.Parser.Common (Parser)
-import Flow.Parser.Pattern qualified as PPat
+import Flow.AST.Surface.Type qualified as Surface
+import Flow.Parser.Pattern (pPattern, pPatternSimple)
 import Flow.Parser.SpecHelpers (shouldBe, shouldBeParsed, testParser)
 
-pPatternSimple :: Parser (Surface.PatternSimple Lexer.SourceSpan)
-pPatternSimple =
-  PPat.pPatternSimple pPatternSimple (fail "anyType") <&> uncurry Surface.PatternSimple
-
-anyType :: Surface.Identifier () -> Surface.QualifiedIdentifierF Surface.Type ()
+anyType :: Surface.Identifier () -> Surface.QualifiedIdentifierF ()
 anyType ident =
   Surface.QualifiedIdentifierF
     { qualifierPrefix = Nothing
@@ -38,20 +30,20 @@ mkVar :: Text -> Surface.Identifier ()
 mkVar name = Surface.Identifier{name, ann = ()}
 
 wrapSimple ::
-  Surface.PatternSimpleF Surface.PatternSimple Surface.Type () ->
+  Surface.PatternSimpleF Surface.PatternSimple () ->
   Surface.PatternSimple ()
 wrapSimple simple =
   Surface.PatternSimple
-    { patternSimple = simple
+    { pat = simple
     , ann = ()
     }
 
 wrapPattern ::
-  Surface.PatternF Surface.Pattern Surface.Type () ->
+  Surface.PatternF () ->
   Surface.Pattern ()
 wrapPattern pattern =
   Surface.Pattern
-    { pattern = pattern
+    { pat = pattern
     , ann = ()
     }
 
@@ -88,7 +80,7 @@ tuplePattern ps =
 constructorPattern ::
   Text ->
   Maybe [Surface.Identifier ()] ->
-  Surface.PatternFieldsF Surface.Pattern Surface.Type () ->
+  Surface.PatternFieldsF Surface.Pattern () ->
   Surface.Pattern ()
 constructorPattern name params fields =
   wrapPattern $
@@ -119,7 +111,7 @@ constructorPattern name params fields =
 
 fieldsTuple ::
   [Surface.Pattern ()] ->
-  Surface.PatternFieldsF Surface.Pattern Surface.Type ()
+  Surface.PatternFieldsF Surface.Pattern ()
 fieldsTuple ps =
   Surface.PatFldsUnnamedF
     ( requireVector
@@ -134,11 +126,11 @@ fieldsTuple ps =
     )
 
 fieldsNamed ::
-  [Surface.PatternFieldNamedF Surface.Pattern Surface.Type ()] ->
-  Surface.PatternFieldsF Surface.Pattern Surface.Type ()
+  [Surface.PatternFieldNamedF Surface.Pattern ()] ->
+  Surface.PatternFieldsF Surface.Pattern ()
 fieldsNamed ps = Surface.PatFldsNamedF (fromJust $ NE.fromList ps)
 
-mkFieldNamed :: Text -> Surface.Pattern () -> Surface.PatternFieldNamedF Surface.Pattern Surface.Type ()
+mkFieldNamed :: Text -> Surface.Pattern () -> Surface.PatternFieldNamedF Surface.Pattern ()
 mkFieldNamed name value =
   Surface.PatFldNmdValueF $
     Surface.PatternFieldNamedValueF
@@ -147,7 +139,7 @@ mkFieldNamed name value =
       , ann = ()
       }
 
-mkFieldNamedPun :: Text -> Surface.PatternFieldNamedF Surface.Pattern Surface.Type ()
+mkFieldNamedPun :: Text -> Surface.PatternFieldNamedF Surface.Pattern ()
 mkFieldNamedPun name =
   Surface.PatFldNmdPunningF $
     Surface.PatternFieldNamedPunningF

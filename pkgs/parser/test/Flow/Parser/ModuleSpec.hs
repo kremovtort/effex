@@ -7,30 +7,16 @@ import "text" Data.Text (Text)
 import "text" Data.Text qualified as Text
 import "vector" Data.Vector qualified as Vector
 
-import Flow.AST.Surface qualified as Surface
-import Flow.AST.Surface.Callable (CallableHeader (whereBlock))
-import Flow.AST.Surface.Callable qualified as Surface
 import Flow.AST.Surface.Common qualified as Surface
-import Flow.AST.Surface.Constraint qualified as Surface
-import Flow.AST.Surface.Decl qualified as Surface
-import Flow.AST.Surface.Expr qualified as Surface
+import Flow.AST.Surface.Core qualified as Surface
+import Flow.AST.Surface.Data qualified as Surface
 import Flow.AST.Surface.Literal qualified as Surface
-import Flow.AST.Surface.Module (ModuleItemF (..))
-import Flow.AST.Surface.Module qualified as Surface
+import Flow.AST.Surface.Mod qualified as Surface
 import Flow.AST.Surface.Pattern qualified as Surface
-import Flow.AST.Surface.Syntax qualified as Surface
 import Flow.AST.Surface.Type qualified as Surface
 import Flow.AST.Surface.Use qualified as Surface
-import Flow.Parser (pModDefinitionBody)
+import Flow.Parser.Mod (pModDefinitionBody)
 import Flow.Parser.SpecHelpers (shouldBe, shouldBeParsed, testParser)
-
-type ModuleItem =
-  Surface.ModuleItemF
-    Surface.Mod
-    Surface.Statement
-    Surface.PatternSimple
-    Surface.Type
-    Surface.Expression
 
 modIdent :: Text -> Surface.Identifier ()
 modIdent name = Surface.Identifier{name, ann = ()}
@@ -53,13 +39,13 @@ simpleType name =
     , ann = ()
     }
 
-moduleBody :: [ModuleItem ()] -> Surface.ModDefinitionBody ()
+moduleBody :: [Surface.ModuleItemF ()] -> Surface.ModDefinitionBodyF ()
 moduleBody items =
   Surface.ModDefinitionBodyF
     { items = Vector.fromList items
     }
 
-modDecl :: Text -> ModuleItem ()
+modDecl :: Text -> Surface.ModuleItemF ()
 modDecl name =
   Surface.ModuleItemF
     { pub = Nothing
@@ -67,7 +53,7 @@ modDecl name =
     , ann = ()
     }
 
-modDef :: Text -> [ModuleItem ()] -> ModuleItem ()
+modDef :: Text -> [Surface.ModuleItemF ()] -> Surface.ModuleItemF ()
 modDef name items =
   Surface.ModuleItemF
     { pub = Nothing
@@ -135,7 +121,7 @@ useClauseAs path alias =
           , ann = ()
           }
 
-structItem :: Maybe (Surface.Pub ()) -> Text -> ModuleItem ()
+structItem :: Maybe (Surface.Pub ()) -> Text -> Surface.ModuleItemF ()
 structItem pub' name =
   Surface.ModuleItemF
     { pub = pub'
@@ -151,7 +137,7 @@ structItem pub' name =
     , ann = ()
     }
 
-enumItem :: Maybe (Surface.Pub ()) -> Text -> [Text] -> ModuleItem ()
+enumItem :: Maybe (Surface.Pub ()) -> Text -> [Text] -> Surface.ModuleItemF ()
 enumItem pub' name variants =
   Surface.ModuleItemF
     { pub = pub'
@@ -186,7 +172,7 @@ enumItem pub' name variants =
     , ann = ()
     }
 
-typeAliasItem :: Maybe (Surface.Pub ()) -> Text -> Surface.Type () -> ModuleItem ()
+typeAliasItem :: Maybe (Surface.Pub ()) -> Text -> Surface.Type () -> Surface.ModuleItemF ()
 typeAliasItem pub' name ty =
   Surface.ModuleItemF
     { pub = pub'
@@ -235,7 +221,7 @@ fnItem ::
   [(Bool, Text, Surface.Type ())] ->
   Maybe (Surface.Type ()) ->
   Maybe (Surface.Type ()) ->
-  ModuleItem ()
+  Surface.ModuleItemF ()
 fnItem pub' name args effects result =
   Surface.ModuleItemF
     { pub = pub'
@@ -280,7 +266,7 @@ fnItem pub' name args effects result =
       , ann = ()
       }
 
-letItem :: Maybe (Surface.Pub ()) -> Text -> Surface.Type () -> Surface.Expression () -> ModuleItem ()
+letItem :: Maybe (Surface.Pub ()) -> Text -> Surface.Type () -> Surface.Expression () -> Surface.ModuleItemF ()
 letItem pub' name ty expr =
   Surface.ModuleItemF
     { pub = pub'
@@ -289,7 +275,7 @@ letItem pub' name ty expr =
           Surface.LetDefinitionF
             { lhs =
                 Surface.PatternSimple
-                  { patternSimple =
+                  { pat =
                       Surface.PatSimVarF
                         ( Surface.PatternVarF
                             { ref = Nothing
@@ -327,7 +313,7 @@ spec = describe "Module parser (minimal subset)" do
   it "parses use leaf 'use std::io;'" do
     let expected =
           moduleBody
-            [ ModuleItemF
+            [ Surface.ModuleItemF
                 { pub = Nothing
                 , item = Surface.ModItemUseF (useClauseLeaf ["std", "io"])
                 , ann = ()
@@ -338,7 +324,7 @@ spec = describe "Module parser (minimal subset)" do
   it "parses use leaf-as 'use std::io as io;'" do
     let expected =
           moduleBody
-            [ ModuleItemF
+            [ Surface.ModuleItemF
                 { pub = Nothing
                 , item = Surface.ModItemUseF (useClauseAs ["std", "io"] "io")
                 , ann = ()
@@ -385,7 +371,7 @@ spec = describe "Module parser (minimal subset)" do
       shouldBeParsed
         ( `shouldBe`
             moduleBody
-              [ ModuleItemF
+              [ Surface.ModuleItemF
                   { pub = Nothing
                   , item = Surface.ModItemUseF useClause
                   , ann = ()

@@ -6,14 +6,12 @@ import "nonempty-vector" Data.Vector.NonEmpty qualified as NonEmptyVector
 import "text" Data.Text (Text)
 import "vector" Data.Vector qualified as Vector
 
-import Flow.AST.Surface qualified as Surface
 import Flow.AST.Surface.Common qualified as Surface
-import Flow.AST.Surface.Constraint qualified as Surface
 import Flow.AST.Surface.Type qualified as Surface
 import Flow.Parser.SpecHelpers (shouldBe, shouldBeParsed, testParser)
 import Flow.Parser.Type qualified as PType
 
-anyType :: Surface.Identifier () -> Surface.QualifiedIdentifierF Surface.Type ()
+anyType :: Surface.Identifier () -> Surface.QualifiedIdentifierF ()
 anyType ident =
   Surface.QualifiedIdentifierF
     { qualifierPrefix = Nothing
@@ -37,9 +35,6 @@ simpleType name =
     , ann = ()
     }
 
-builtin :: Surface.Builtin -> Surface.Type ()
-builtin b = Surface.Type{ty = Surface.TyBuiltinF b, ann = ()}
-
 ref :: Maybe (Surface.RegionIdentifier ()) -> Bool -> Surface.Type () -> Surface.Type ()
 ref mregion mut inner =
   Surface.Type
@@ -55,7 +50,7 @@ ref mregion mut inner =
     , ann = ()
     }
 
-fnType :: [Surface.Type ()] -> Maybe (Surface.FnEffectsResultF Surface.Type ()) -> Surface.Type ()
+fnType :: [Surface.Type ()] -> Maybe (Surface.FnEffectsResultF ()) -> Surface.Type ()
 fnType args effRes =
   Surface.Type
     { ty =
@@ -68,7 +63,7 @@ fnType args effRes =
     , ann = ()
     }
 
-fnEffRes :: Maybe (Surface.FnEffectsF Surface.Type ()) -> Surface.Type () -> Surface.FnEffectsResultF Surface.Type ()
+fnEffRes :: Maybe (Surface.FnEffectsF ()) -> Surface.Type () -> Surface.FnEffectsResultF ()
 fnEffRes effects result =
   Surface.FnEffectsResultF
     { effects = effects
@@ -76,13 +71,13 @@ fnEffRes effects result =
     , ann = ()
     }
 
-fnEffectRow :: [Surface.FnEffectAtomF Surface.Type ()] -> Maybe (Surface.Type ()) -> Surface.FnEffectsF Surface.Type ()
+fnEffectRow :: [Surface.FnEffectAtomF ()] -> Maybe (Surface.Type ()) -> Surface.FnEffectsF ()
 fnEffectRow atoms tailVar =
   Surface.FnEffectsRowF
     Surface.FnEffectRowF
       { regions = Vector.empty
       , effects = Vector.fromList atoms
-      , tailVars = maybe Vector.empty (Vector.singleton . (,())) tailVar
+      , tailVars = maybe Vector.empty Vector.singleton tailVar
       , ann = ()
       }
 
@@ -93,7 +88,7 @@ effectRow effects tailVar =
         Surface.TyEffectRowF
           Surface.EffectRowF
             { effects = Vector.fromList effects
-            , tailVars = maybe Vector.empty (Vector.singleton . (,())) tailVar
+            , tailVars = maybe Vector.empty Vector.singleton tailVar
             , ann = ()
             }
     , ann = ()
@@ -117,7 +112,7 @@ spec = describe "Type parser (minimal subset)" do
                   Surface.AppF
                     { head = headT
                     , args =
-                        Surface.BindersAppF
+                        Surface.TypeArgumentsF
                           { types = NonEmptyVector.singleton i32T
                           , ann = ()
                           }
