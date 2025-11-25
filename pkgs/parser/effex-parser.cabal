@@ -1,0 +1,92 @@
+cabal-version: 3.14
+name: effex-parser
+version: 0.1.0.0
+-- synopsis:
+-- description:
+license: MPL-2.0
+license-file: LICENSE
+author: Alexander Makarov
+maintainer: i@kremovtort.ru
+-- copyright:
+category: Development
+build-type: Simple
+
+common warnings
+  ghc-options: -Wall
+
+common extensions
+  default-extensions:
+    BlockArguments
+    DeriveAnyClass
+    DerivingStrategies
+    DuplicateRecordFields
+    MultilineStrings
+    NoFieldSelectors
+    OverloadedRecordDot
+    OverloadedStrings
+    PackageImports
+    QuantifiedConstraints
+    StrictData
+
+library
+  import: warnings, extensions
+  exposed-modules:
+    Effex.Lexer
+    Effex.Parser
+    Effex.Parser.Common
+    Effex.Parser.Core
+    Effex.Parser.Data
+    Effex.Parser.Literal
+    Effex.Parser.Mod
+    Effex.Parser.Pattern
+    Effex.Parser.Type
+    Effex.Parser.Use
+
+  build-depends:
+    base ^>=4.21.0.0,
+    bytestring,
+    containers,
+    effex-ast,
+    megaparsec,
+    nonempty-vector,
+    parser-combinators,
+    scientific,
+    template-haskell,
+    text,
+    tree-diff,
+    vector,
+
+  hs-source-dirs: lib
+  default-language: GHC2024
+
+test-suite effex-parser-test
+  import: warnings, extensions
+  default-language: GHC2024
+  other-modules:
+    Effex.LexerSpec
+    Effex.Parser.ExpressionSpec
+    Effex.Parser.LHSExpressionSpec
+    Effex.Parser.ModuleSpec
+    Effex.Parser.PatternSpec
+    Effex.Parser.SpecHelpers
+    Effex.Parser.TypeSpec
+
+  -- other-extensions:
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: Main.hs
+  build-depends:
+    base ^>=4.21.0.0,
+    bytestring,
+    effex-ast,
+    effex-parser,
+    hspec,
+    hspec-megaparsec,
+    megaparsec,
+    nonempty-vector,
+    prettyprinter,
+    prettyprinter-ansi-terminal,
+    scientific,
+    text,
+    tree-diff,
+    vector,

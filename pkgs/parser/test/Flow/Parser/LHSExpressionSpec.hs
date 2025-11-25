@@ -1,13 +1,13 @@
-module Flow.Parser.LHSExpressionSpec (spec) where
+module Effex.Parser.LHSExpressionSpec (spec) where
 
 import "hspec" Test.Hspec (Spec, describe, it)
 import "text" Data.Text (Text)
 
-import Flow.AST.Surface.Common qualified as Surface
-import Flow.AST.Surface.Core qualified as Surface
-import Flow.AST.Surface.Type qualified as Surface
-import Flow.Parser.Core (pLHSExpression)
-import Flow.Parser.SpecHelpers (shouldBe, shouldBeParsed, testParser)
+import Effex.AST.Surface.Common qualified as Surface
+import Effex.AST.Surface.Core qualified as Surface
+import Effex.AST.Surface.Type qualified as Surface
+import Effex.Parser.Core (pLHSExpression)
+import Effex.Parser.SpecHelpers (shouldBe, shouldBeParsed, testParser)
 
 lhsVar :: Text -> Surface.LHSExpression ()
 lhsVar name =

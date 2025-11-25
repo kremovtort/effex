@@ -1,4 +1,4 @@
-module Flow.Parser.ModuleSpec (spec) where
+module Effex.Parser.ModuleSpec (spec) where
 
 import "base" Data.Maybe (fromJust)
 import "hspec" Test.Hspec (Spec, describe, it)
@@ -7,16 +7,16 @@ import "text" Data.Text (Text)
 import "text" Data.Text qualified as Text
 import "vector" Data.Vector qualified as Vector
 
-import Flow.AST.Surface.Common qualified as Surface
-import Flow.AST.Surface.Core qualified as Surface
-import Flow.AST.Surface.Data qualified as Surface
-import Flow.AST.Surface.Literal qualified as Surface
-import Flow.AST.Surface.Mod qualified as Surface
-import Flow.AST.Surface.Pattern qualified as Surface
-import Flow.AST.Surface.Type qualified as Surface
-import Flow.AST.Surface.Use qualified as Surface
-import Flow.Parser.Mod (pModDefinitionBody)
-import Flow.Parser.SpecHelpers (shouldBe, shouldBeParsed, testParser)
+import Effex.AST.Surface.Common qualified as Surface
+import Effex.AST.Surface.Core qualified as Surface
+import Effex.AST.Surface.Data qualified as Surface
+import Effex.AST.Surface.Literal qualified as Surface
+import Effex.AST.Surface.Mod qualified as Surface
+import Effex.AST.Surface.Pattern qualified as Surface
+import Effex.AST.Surface.Type qualified as Surface
+import Effex.AST.Surface.Use qualified as Surface
+import Effex.Parser.Mod (pModDefinitionBody)
+import Effex.Parser.SpecHelpers (shouldBe, shouldBeParsed, testParser)
 
 modIdent :: Text -> Surface.Identifier ()
 modIdent name = Surface.Identifier{name, ann = ()}

@@ -1,0 +1,72 @@
+cabal-version: 3.14
+name: effex-ast
+version: 0.1.0.0
+-- synopsis:
+-- description:
+license: MPL-2.0
+license-file: LICENSE
+author: Alexander Makarov
+maintainer: i@kremovtort.ru
+-- copyright:
+category: Development
+build-type: Simple
+
+common warnings
+  ghc-options: -Wall
+
+common extensions
+  default-extensions:
+    BlockArguments
+    DeriveAnyClass
+    DerivingStrategies
+    DuplicateRecordFields
+    NoFieldSelectors
+    OverloadedRecordDot
+    OverloadedStrings
+    PackageImports
+    StrictData
+
+library
+  import: warnings, extensions
+  exposed-modules:
+    Effex.AST
+    Effex.AST.Ann
+    Effex.AST.Surface.Common
+    Effex.AST.Surface.Core
+    Effex.AST.Surface.Data
+    Effex.AST.Surface.Literal
+    Effex.AST.Surface.Mod
+    Effex.AST.Surface.Operators
+    Effex.AST.Surface.Pattern
+    Effex.AST.Surface.Type
+    Effex.AST.Surface.Use
+
+  build-depends:
+    base ^>=4.21.0.0,
+    bytestring,
+    containers,
+    megaparsec,
+    nonempty-vector,
+    scientific,
+    text,
+    tree-diff,
+    vector,
+
+  hs-source-dirs: lib
+  default-language: GHC2024
+
+test-suite effex-ast-test
+  import: warnings, extensions
+  default-language: GHC2024
+  other-modules:
+  -- other-extensions:
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: Main.hs
+  build-depends:
+    base ^>=4.21.0.0,
+    containers,
+    effex-ast,
+    hspec,
+    text,
+    vector,

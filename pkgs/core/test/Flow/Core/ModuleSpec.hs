@@ -1,4 +1,4 @@
-module Flow.Core.ModuleSpec (spec) where
+module Effex.Core.ModuleSpec (spec) where
 
 import Prelude
 
@@ -21,10 +21,10 @@ import "tree-diff" Data.TreeDiff.Class (ToExpr (..), ediff)
 import "tree-diff" Data.TreeDiff.Pretty (ansiWlBgEditExprCompact)
 import "vector" Data.Vector qualified as Vector
 
-import Flow.AST.Ann (SourceSpan (..))
-import Flow.AST.Surface (ModDefinitionBody)
-import Flow.AST.Surface.Module (ModDefinitionBodyF (..))
-import Flow.Core.Module (
+import Effex.AST.Ann (SourceSpan (..))
+import Effex.AST.Surface (ModDefinitionBody)
+import Effex.AST.Surface.Module (ModDefinitionBodyF (..))
+import Effex.Core.Module (
   BasicAnn (..),
   DuplicateModuleDeclarationError (..),
   ModuleDeclaration (..),
@@ -34,8 +34,8 @@ import Flow.Core.Module (
   Visibility (..),
   collectModuleDefinitionModules,
  )
-import Flow.Lexer qualified as Lexer
-import Flow.Parser (pModDefinitionBody)
+import Effex.Lexer qualified as Lexer
+import Effex.Parser (pModDefinitionBody)
 
 pShowDiff :: (Eq a, ToExpr a) => a -> a -> Text
 pShowDiff a b =

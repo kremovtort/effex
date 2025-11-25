@@ -1,4 +1,4 @@
-module Flow.LexerSpec (spec) where
+module Effex.LexerSpec (spec) where
 
 import "base" Data.Word (Word8)
 import "bytestring" Data.ByteString (ByteString)
@@ -13,7 +13,7 @@ import "text" Data.Text (Text)
 import "vector" Data.Vector (Vector)
 import "vector" Data.Vector qualified as Vector
 
-import Flow.Lexer
+import Effex.Lexer
 
 spec :: Spec
 spec = do

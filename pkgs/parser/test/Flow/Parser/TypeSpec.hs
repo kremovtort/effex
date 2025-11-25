@@ -1,4 +1,4 @@
-module Flow.Parser.TypeSpec (spec) where
+module Effex.Parser.TypeSpec (spec) where
 
 import "base" Data.Maybe (fromJust)
 import "hspec" Test.Hspec (Spec, describe, it)
@@ -6,10 +6,10 @@ import "nonempty-vector" Data.Vector.NonEmpty qualified as NonEmptyVector
 import "text" Data.Text (Text)
 import "vector" Data.Vector qualified as Vector
 
-import Flow.AST.Surface.Common qualified as Surface
-import Flow.AST.Surface.Type qualified as Surface
-import Flow.Parser.SpecHelpers (shouldBe, shouldBeParsed, testParser)
-import Flow.Parser.Type qualified as PType
+import Effex.AST.Surface.Common qualified as Surface
+import Effex.AST.Surface.Type qualified as Surface
+import Effex.Parser.SpecHelpers (shouldBe, shouldBeParsed, testParser)
+import Effex.Parser.Type qualified as PType
 
 anyType :: Surface.Identifier () -> Surface.QualifiedIdentifierF ()
 anyType ident =

@@ -1,4 +1,4 @@
-module Flow.Parser.SpecHelpers where
+module Effex.Parser.SpecHelpers where
 
 import "base" Data.Foldable (toList)
 import "base" Data.Functor (void)
@@ -14,8 +14,8 @@ import "text" Data.Text qualified as Text
 import "tree-diff" Data.TreeDiff.Class (ToExpr (..), ediff)
 import "tree-diff" Data.TreeDiff.Pretty (ansiWlBgEditExprCompact, ansiWlExpr)
 
-import Flow.Lexer qualified as Lexer
-import Flow.Parser.Common (Parser)
+import Effex.Lexer qualified as Lexer
+import Effex.Parser.Common (Parser)
 
 pShow :: (ToExpr a) => a -> Text
 pShow = renderStrict . layoutSmart defaultLayoutOptions . ansiWlExpr . toExpr

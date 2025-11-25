@@ -1,4 +1,4 @@
-module Flow.Parser.ExpressionSpec (spec) where
+module Effex.Parser.ExpressionSpec (spec) where
 
 import "base" Data.Functor ((<&>))
 import "base" Data.Maybe (fromJust)
@@ -7,14 +7,14 @@ import "nonempty-vector" Data.Vector.NonEmpty qualified as NonEmptyVector
 import "text" Data.Text (Text)
 import "vector" Data.Vector qualified as Vector
 
-import Flow.AST.Surface.Common qualified as Surface
-import Flow.AST.Surface.Core qualified as Surface
-import Flow.AST.Surface.Literal qualified as Surface
-import Flow.AST.Surface.Operators qualified as Surface
-import Flow.AST.Surface.Pattern qualified as Surface
-import Flow.AST.Surface.Type qualified as Surface
-import Flow.Parser.Core qualified as Parser
-import Flow.Parser.SpecHelpers (shouldBe, shouldBeParsed, testParser)
+import Effex.AST.Surface.Common qualified as Surface
+import Effex.AST.Surface.Core qualified as Surface
+import Effex.AST.Surface.Literal qualified as Surface
+import Effex.AST.Surface.Operators qualified as Surface
+import Effex.AST.Surface.Pattern qualified as Surface
+import Effex.AST.Surface.Type qualified as Surface
+import Effex.Parser.Core qualified as Parser
+import Effex.Parser.SpecHelpers (shouldBe, shouldBeParsed, testParser)
 
 literalInt :: Integer -> Surface.Expression ()
 literalInt n = Surface.Expression{expr = Surface.ELiteral (Surface.LitInteger n), ann = ()}

@@ -1,4 +1,4 @@
-module Flow.Parser.PatternSpec (spec) where
+module Effex.Parser.PatternSpec (spec) where
 
 import "base" Data.Functor ((<&>))
 import "base" Data.List.NonEmpty qualified as ListNE
@@ -9,12 +9,12 @@ import "nonempty-vector" Data.Vector.NonEmpty qualified as NE
 import "text" Data.Text (Text)
 import "vector" Data.Vector qualified as Vector
 
-import Flow.AST.Surface.Common qualified as Surface
-import Flow.AST.Surface.Literal qualified as Surface
-import Flow.AST.Surface.Pattern qualified as Surface
-import Flow.AST.Surface.Type qualified as Surface
-import Flow.Parser.Pattern (pPattern, pPatternSimple)
-import Flow.Parser.SpecHelpers (shouldBe, shouldBeParsed, testParser)
+import Effex.AST.Surface.Common qualified as Surface
+import Effex.AST.Surface.Literal qualified as Surface
+import Effex.AST.Surface.Pattern qualified as Surface
+import Effex.AST.Surface.Type qualified as Surface
+import Effex.Parser.Pattern (pPattern, pPatternSimple)
+import Effex.Parser.SpecHelpers (shouldBe, shouldBeParsed, testParser)
 
 anyType :: Surface.Identifier () -> Surface.QualifiedIdentifierF ()
 anyType ident =
